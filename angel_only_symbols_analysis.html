@@ -1,0 +1,95 @@
+
+<div style="padding: 1rem 0;">
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 2rem;">
+    <div style="background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 1rem; text-align: center;">
+      <div style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 4px;">Total angel-only</div>
+      <div style="font-size: 28px; font-weight: 500;">146</div>
+    </div>
+    <div style="background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 1rem; text-align: center;">
+      <div style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 4px;">Delisted / merged</div>
+      <div style="font-size: 28px; font-weight: 500; color: #E24B4A;">52</div>
+    </div>
+    <div style="background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 1rem; text-align: center;">
+      <div style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 4px;">New IPOs (post-2021)</div>
+      <div style="font-size: 28px; font-weight: 500; color: #1D9E75;">67</div>
+    </div>
+    <div style="background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 1rem; text-align: center;">
+      <div style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 4px;">Renamed / rebranded</div>
+      <div style="font-size: 28px; font-weight: 500; color: #BA7517;">18</div>
+    </div>
+    <div style="background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 1rem; text-align: center;">
+      <div style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 4px;">Needs manual check</div>
+      <div style="font-size: 28px; font-weight: 500; color: #7F77DD;">9</div>
+    </div>
+  </div>
+
+  <div style="position: relative; width: 100%; height: 320px;">
+    <canvas id="mainChart" role="img" aria-label="Bar chart showing 146 angel-only symbols broken into 5 categories">Delisted/merged: 52, New IPOs: 67, Renamed: 18, Needs review: 9</canvas>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 16px; margin: 12px 0 2rem; font-size: 12px; color: var(--color-text-secondary);">
+    <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#E24B4A;"></span>Delisted / merged</span>
+    <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#1D9E75;"></span>New IPOs (post-2021)</span>
+    <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#BA7517;"></span>Renamed / rebranded</span>
+    <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#7F77DD;"></span>Needs manual review</span>
+  </div>
+
+  <div style="border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed;">
+      <thead>
+        <tr style="background: var(--color-background-secondary);">
+          <th style="padding: 10px 14px; text-align: left; font-weight: 500; color: var(--color-text-secondary); width: 22%;">Category</th>
+          <th style="padding: 10px 14px; text-align: left; font-weight: 500; color: var(--color-text-secondary); width: 10%;">Count</th>
+          <th style="padding: 10px 14px; text-align: left; font-weight: 500; color: var(--color-text-secondary); width: 68%;">Examples & reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-top: 0.5px solid var(--color-border-tertiary);">
+          <td style="padding: 10px 14px; font-weight: 500; color: #A32D2D;">Delisted / merged</td>
+          <td style="padding: 10px 14px;">52</td>
+          <td style="padding: 10px 14px; color: var(--color-text-secondary);">DHFL (bankrupt), JETAIRWAYS (grounded), RCOM (delisted), ALBK/CORPBANK/ANDHRABANK/SYNDIBANK/ORIENTBANK (merged into larger PSU banks), MINDTREE (merged into LTIMindtree), GRUH (merged into HDFC Bank)</td>
+        </tr>
+        <tr style="border-top: 0.5px solid var(--color-border-tertiary); background: var(--color-background-secondary);">
+          <td style="padding: 10px 14px; font-weight: 500; color: #0F6E56;">New IPOs post-2021</td>
+          <td style="padding: 10px 14px;">67</td>
+          <td style="padding: 10px 14px; color: var(--color-text-secondary);">SWIGGY, OLAELEC, HYUNDAI, PAYTM, NYKAA, POLICYBZR, DELHIVERY, IREDA, DOMS, SAGILITY — listed after your Yahoo Finance data starts; Yahoo has them but your 2-year pull missed older data</td>
+        </tr>
+        <tr style="border-top: 0.5px solid var(--color-border-tertiary);">
+          <td style="padding: 10px 14px; font-weight: 500; color: #854F0B;">Renamed / rebranded</td>
+          <td style="padding: 10px 14px;">18</td>
+          <td style="padding: 10px 14px; color: var(--color-text-secondary);">LTM → LTIM (LTIMindtree), TMPV → TIINDIA (Tube Investments), ETERNAL (Zomato rebranded), LTF → L&TFH, ABREL, JSWDULUX (Asian Paints JV renamed), GVT&D → GVTD</td>
+        </tr>
+        <tr style="border-top: 0.5px solid var(--color-border-tertiary); background: var(--color-background-secondary);">
+          <td style="padding: 10px 14px; font-weight: 500; color: #534AB7;">Needs manual review</td>
+          <td style="padding: 10px 14px;">9</td>
+          <td style="padding: 10px 14px; color: var(--color-text-secondary);">Ambiguous matches: HDFC→(HDFCAMC/HDFCBANK/HDFCLIFE), BAJAJCON, BAJAJELEC, TATACOFFEE, L&TFH, GODREJAGRO — parent/subsidiary confusion</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+new Chart(document.getElementById('mainChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Delisted / merged', 'New IPOs (post-2021)', 'Renamed / rebranded', 'Needs manual review'],
+    datasets: [{
+      data: [52, 67, 18, 9],
+      backgroundColor: ['#E24B4A', '#1D9E75', '#BA7517', '#7F77DD'],
+      borderWidth: 0,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { autoSkip: false, color: '#888780', font: { size: 12 } }, grid: { display: false } },
+      y: { ticks: { color: '#888780', font: { size: 12 } }, grid: { color: 'rgba(136,135,128,0.15)' }, beginAtZero: true }
+    }
+  }
+});
+</script>

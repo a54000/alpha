@@ -1,0 +1,16 @@
+python-dotenv
+pandas
+pandas-ta
+pytest
+streamlit
+yfinance
+sqlalchemy
+alembic
+psycopg2-binary
+fastapi
+uvicorn
+httpx
+smartapi-python
+pyotp
+logzero
+websocket-client

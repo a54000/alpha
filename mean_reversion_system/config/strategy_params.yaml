@@ -1,0 +1,33 @@
+strategy:
+  bollinger_bands:
+    period: 20
+    std_dev: 2.0
+    bandwidth_threshold: 0.10
+  rsi:
+    period: 14
+    oversold: 30
+    overbought: 70
+  adx:
+    period: 14
+    max_adx_regime: 20
+  atr:
+    period: 14
+    sl_atr_multiplier: 2.25
+  exits:
+    max_hold_days: 10
+  risk:
+    risk_per_trade: 0.01
+    max_concurrent_positions: 5
+  volume:
+    ratio_period: 20
+    min_ratio: 0.8
+  partial_exit:
+    enabled: false
+    defer_exit_day: false
+    fraction: 0.5
+    reward_r: 1.0
+
+data:
+  cache_dir: data/cache
+  retry_attempts: 3
+  retry_backoff_seconds: 1.0

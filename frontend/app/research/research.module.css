@@ -1,0 +1,72 @@
+.verdict {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.8fr);
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.verdict h2 {
+  margin: 8px 0 0;
+  font-size: 24px;
+  letter-spacing: 0;
+}
+
+.topGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.verdictStats,
+.metricGrid,
+.calloutGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.metricGrid {
+  grid-template-columns: minmax(120px, 1fr) auto;
+  margin-top: 14px;
+}
+
+.metricGrid span,
+.evidenceRow span,
+.copy {
+  color: var(--muted);
+}
+
+.metricGrid strong,
+.evidenceRow strong {
+  text-align: right;
+}
+
+.evidenceRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.copy p {
+  margin: 4px 0 0;
+}
+
+.calloutGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.calloutGrid > div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--panel-subtle);
+}
+
+@media (max-width: 900px) {
+  .verdict,
+  .topGrid,
+  .calloutGrid {
+    grid-template-columns: 1fr;
+  }
+}

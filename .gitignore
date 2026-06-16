@@ -1,0 +1,39 @@
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.pytest_tmp*/
+.venv/
+venv/
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env*
+
+# Logs and generated runtime output
+logs/
+reports/
+results/
+backups/
+*.log
+
+# Database dumps and bulky local data
+*.dump
+*.backup
+*.bak
+*.sqlite
+*.db
+data/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+__MACOSX/
+

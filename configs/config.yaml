@@ -1,0 +1,119 @@
+# NSE Research Platform - Master Configuration
+# All parameters read from here. No hardcoded values in code.
+# Change here -> takes effect on next pipeline run.
+# Version-control this file. Never store secrets here (use .env).
+
+capital: 1_000_000
+
+portfolio:
+  swing_size: 10
+  positional_size: 10
+  lt_size: 10
+  position_sizing: equal
+
+rebalance:
+  swing:
+    frequency: weekly
+    day: monday
+  positional:
+    frequency: biweekly
+    day: monday
+  lt:
+    frequency: monthly
+    day: first_trading_day
+
+ranking:
+  swing_top_n: 20
+  positional_top_n: 20
+  lt_top_n: 20
+  entry_top_n: 10
+
+  score_bands:
+    exceptional: 90
+    strong: 80
+    watch: 70
+    weak: 60
+    warning_below: 60
+
+liquidity:
+  min_avg_traded_value_20d: 100_000_000
+  min_avg_volume_20d: 100_000
+  min_price: 10
+  min_history_days: 60
+
+risk:
+  atr_period: 14
+  atr_multiplier: 1.5
+  max_stop_pct: 0.08
+  rr_target_1: 2.0
+  rr_target_2: 3.5
+  rr_target_3: 5.0
+
+backtest:
+  start_date: "2022-01-01"
+  end_date: "today"
+  warmup_days: 252
+  slippage_pct: 0.002
+  brokerage_flat: 20
+  stt_pct: 0.001
+  stamp_duty_pct: 0.00015
+  risk_free_rate: 0.065
+
+  holding_periods:
+    swing: 20
+    positional: 90
+    lt: 252
+
+  schedule: weekly
+
+  walk_forward:
+    train_months: 18
+    test_months: 6
+    step_months: 3
+
+indicators:
+  rsi_primary: 14
+  rsi_secondary: 9
+  macd_fast: 12
+  macd_slow: 26
+  macd_signal: 9
+  adx_period: 14
+  stoch_k: 14
+  stoch_d: 3
+  stoch_smooth_k: 3
+  ema_periods: [5, 13, 20, 50, 150, 200]
+  bb_period: 20
+  bb_std: 2
+  volume_avg_period: 20
+  rs_period_short: 20
+  rs_period_long: 60
+  high_52w_period: 252
+
+sector:
+  return_periods:
+    short: 21
+    medium: 63
+    long: 126
+  composite_weights:
+    short: 0.20
+    medium: 0.50
+    long: 0.30
+
+data:
+  price_source: yfinance
+  fundamental_source: screener
+  nifty500_symbol: "^CRSLDX"
+  history_years: 3
+  fundamental_lag_days: 5
+
+pipeline:
+  daily_run_time: "07:00"
+  timezone: "Asia/Kolkata"
+  alert_if_late_minutes: 30
+
+output:
+  email:
+    enabled: false
+    send_time: "07:45"
+  log_level: INFO
+  reports_dir: "./reports"

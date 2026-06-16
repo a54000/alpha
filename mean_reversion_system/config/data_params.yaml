@@ -1,0 +1,34 @@
+database:
+  name: angel_data
+  host_env: DB_HOST
+  port_env: DB_PORT
+  user_env: DB_USER
+  password_env: DB_PASSWORD
+  url_env: ANGEL_DATABASE_URL
+  pool_min: 2
+  pool_max: 10
+
+backtest:
+  start_date: "2021-09-01"
+  end_date: "2026-06-01"
+  warmup_start: "2021-06-14"
+
+universe:
+  min_bars: 20000
+  min_completeness: 0.70
+  known_special_sessions:
+    - "2022-10-24"
+    - "2023-11-12"
+    - "2024-03-02"
+    - "2024-05-18"
+    - "2024-11-01"
+  known_bad_symbols:
+    - "WIPRO"
+
+resampling:
+  market_open: "09:15"
+  market_close: "15:30"
+  exclude_closing_auction_from_range: true
+
+cache:
+  price_dir: data/cache

@@ -1,0 +1,82 @@
+angel_symbol,company_name,reason,merged_into_symbol,merged_into_company,effective_date,notes
+ALBK,Allahabad Bank,PSU Bank Merger,INDIANB,Indian Bank,2020-04-01,Merged into Indian Bank as part of govt PSU consolidation
+ANDHRABANK,Andhra Bank,PSU Bank Merger,UNIONBANK,Union Bank of India,2020-04-01,Merged into Union Bank along with Corporation Bank
+CORPBANK,Corporation Bank,PSU Bank Merger,UNIONBANK,Union Bank of India,2020-04-01,Merged into Union Bank along with Andhra Bank
+SYNDIBANK,Syndicate Bank,PSU Bank Merger,CANBK,Canara Bank,2020-04-01,Merged into Canara Bank
+ORIENTBANK,Oriental Bank of Commerce,PSU Bank Merger,PNB,Punjab National Bank,2020-04-01,Merged into PNB along with United Bank
+MINDTREE,Mindtree Ltd,Corporate Merger,LTM,LTIMindtree (now LTM),2022-11-25,Merged with L&T Infotech to form LTIMindtree; now rebranded LTM
+LTI,L&T Infotech,Corporate Merger,LTM,LTIMindtree (now LTM),2022-11-25,Merged with Mindtree to form LTIMindtree; now rebranded LTM
+GRUH,Gruh Finance,Corporate Merger,HDFCBANK,HDFC Bank,2019-10-01,Merged into HDFC Bank
+HDFC,HDFC Ltd,Corporate Merger,HDFCBANK,HDFC Bank,2023-07-01,HDFC Ltd merged into HDFC Bank; one of largest mergers in Indian history
+LAKSHVILAS,Lakshmi Vilas Bank,Acquisition/Delisted,DBIL,DBS Bank India,2020-11-27,RBI superseded board; merged into DBS Bank India
+DHFL,Dewan Housing Finance,Insolvency/Delisted,,Piramal Capital acquired assets,2021-09-20,NCLT approved Piramal's resolution plan; equity shareholders got nothing
+RCOM,Reliance Communications,Insolvency/Delisted,,,2019-05-17,Delisted after insolvency; declared bankrupt
+JETAIRWAYS,Jet Airways,Insolvency/Delisted,,,2019-05-17,Operations ceased May 2019; delisted
+RELCAPITAL,Reliance Capital,Insolvency/Delisted,,,2022-11-30,NCLT admitted insolvency; delisted
+RELINFRA,Reliance Infrastructure,Delisted,,,2022-07-01,Voluntarily delisted from NSE/BSE
+INOXLEISUR,INOX Leisure,Corporate Merger,PVRINOX,PVR INOX Ltd,2023-02-03,Merged with PVR to form PVR INOX
+PVR,PVR Ltd,Corporate Merger,PVRINOX,PVR INOX Ltd,2023-02-03,Merged with INOX Leisure to form PVR INOX
+JSLHISAR,Jindal Stainless Hisar,Corporate Merger,JSL,Jindal Stainless Ltd,2022-12-01,Merged into parent Jindal Stainless Ltd
+SHRIRAMCIT,Shriram City Union Finance,Corporate Merger,SHRIRAMFIN,Shriram Finance,2023-01-01,Merged into Shriram Finance as part of Shriram group consolidation
+IDFC,IDFC Ltd,Corporate Merger,IDFCFIRSTB,IDFC First Bank,2024-10-01,IDFC Ltd merged into IDFC First Bank
+ZYDUSWELL,Zydus Wellness,Merger,ZYDUSLIFE,Zydus Lifesciences,2020-01-01,Absorbed into Zydus Lifesciences
+WELSPUNIND,Welspun India,Renamed,WELSPUNLIV,Welspun Living,2022-07-01,Renamed to Welspun Living Ltd
+COFFEEDAY,Coffee Day Enterprises,Insolvency/Delisted,,,2022-09-01,Founder's death triggered financial crisis; delisted
+DISHTV,Dish TV India,Dispute/Suspended,,,2023-01-01,Promoter dispute; trading suspended on NSE
+HEXAWARE,Hexaware Technologies,Voluntarily Delisted,,,2020-09-02,Carlyle-backed buyout; voluntarily delisted
+JUSTDIAL,Just Dial,Acquired,RELIANCE,Reliance (acquirer),2021-08-01,Reliance acquired majority stake; Just Dial still listed but volume dried up
+FCONSUMER,Future Consumer,Insolvency/Delisted,,,2022-07-01,Part of Future Group collapse
+FRETAIL,Future Retail,Insolvency/Delisted,,,2022-07-01,Future Group insolvency; NCLT proceedings
+FLFL,Future Lifestyle Fashions,Insolvency/Delisted,,,2022-07-01,Part of Future Group collapse
+IBVENTURES,Indiabulls Ventures,Merged/Renamed,DHANI,Dhani Services,2021-01-01,Renamed to Dhani Services; restructured
+IBULISL,Indiabulls Integrated Services,Delisted,,,2021-01-01,Restructured out of Indiabulls group
+MAGMA,Magma Fincorp,Acquired/Renamed,POONAWALLA,Poonawalla Fincorp,2021-07-01,Acquired by Poonawalla; renamed
+THYROCARE,Thyrocare Technologies,Acquired,PHARMEASY,PharmEasy (acquirer),2021-07-01,Acquired by PharmEasy parent API Holdings
+MONSANTO,Monsanto India,Delisted,,,2019-06-03,Parent Bayer absorbed Monsanto globally; voluntarily delisted India
+TAKE,Take Solutions,Delisted,,,2021-09-01,Voluntarily delisted
+VAKRANGEE,Vakrangee Ltd,Suspended/Delisted,,,2018-04-01,Trading suspended due to SEBI probe
+RCOM,Reliance Communications,Insolvency/Delisted,,,2019-05-17,Insolvency and delisting
+JPASSOCIAT,Jaiprakash Associates,Insolvency,,,2023-01-01,Debt resolution ongoing; very low liquidity
+IBREALEST,Indiabulls Real Estate,Renamed,ELARA,Elara India Opportunities,2021-07-01,Demerger and renamed
+REPCOHOME,Repco Home Finance,Delisted,,,2024-01-01,Promoter stake sale triggered open offer; trading thin
+GAYAPROJ,Gaya Projects,Delisted,,,2020-01-01,Micro-cap; delisted for non-compliance
+SWANENERGY,Swan Energy,Restructured,SWANCORP,Swan Corporation,2022-01-01,Demerger into Swan Corporation
+UJJIVAN,Ujjivan Financial Services,Restructured,UJJIVANSFB,Ujjivan Small Finance Bank,2022-01-01,Business transferred to banking subsidiary
+EQUITAS,Equitas Holdings,Merged,EQUITASBNK,Equitas Small Finance Bank,2022-10-01,Reverse merged into Equitas SFB
+BLISSGVS,Bliss GVS Pharma,Delisted,,,2023-06-01,Promoter buyback; voluntarily delisted
+STRTECH,Strides Tech / Shasun,Merged,STAR,Strides Pharma Science,2016-01-01,Historical merger; already gone before 2021
+GRINDWELL,Grindwell Norton,Delisted,,,2024-01-01,Saint-Gobain acquired; open offer and delisting
+SYNDIBANK,Syndicate Bank,PSU Bank Merger,CANBK,Canara Bank,2020-04-01,Duplicate entry for clarity
+SUVEN,Suven Life Sciences,Demerger,SUVENPHAR,Suven Pharmaceuticals,2020-02-01,Demerged into two entities
+TEAMLEASE,TeamLease Services,Active - check symbol,TEAMLEASE,,2024-01-01,Symbol may still be active on NSE; verify
+DCBBANK,DCB Bank,Active - check symbol,DCBBANK,,2024-01-01,May still be active under same symbol; verify
+KRBL,KRBL Ltd,Active - check symbol,KRBL,,2024-01-01,Active; may have been missed in your Angel token pull
+KNRCON,KNR Constructions,Active - check symbol,KNRCON,,2024-01-01,Active; may have been missed in your Angel token pull
+PNCINFRA,PNC Infratech,Active - check symbol,PNCINFRA,,2024-01-01,Active; may have been missed in your Angel token pull
+RELAXO,Relaxo Footwears,Active - check symbol,RELAXO,,2024-01-01,Active; may have been missed in your Angel token pull
+VGUARD,V-Guard Industries,Active - check symbol,VGUARD,,2024-01-01,Active; may have been missed in your Angel token pull
+PAGEIND,Page Industries,Active - check symbol,PAGEIND,,2024-01-01,Active; symbol same on Angel and Yahoo
+SYMPHONY,Symphony Ltd,Active - check symbol,SYMPHONY,,2024-01-01,Active; may have been missed in your Angel token pull
+CENTURYPLY,Century Plyboards,Active - check symbol,CENTURYPLY,,2024-01-01,Active; may have been missed in your Angel token pull
+TTKPRESTIG,TTK Prestige,Active - check symbol,TTKPRESTIG,,2024-01-01,Active; may have been missed in your Angel token pull
+VMART,V-Mart Retail,Active - check symbol,VMART,,2024-01-01,Active; may have been missed in your Angel token pull
+SKFINDIA,SKF India,Active - check symbol,SKFINDIA,,2024-01-01,Active; may have been missed in your Angel token pull
+SANOFI,Sanofi India,Active - check symbol,SANOFI,,2024-01-01,Active; may have been missed in your Angel token pull
+RAYMOND,Raymond Ltd,Active - check symbol,RAYMOND,,2024-01-01,Active (demerged Raymond Lifestyle in 2024 but parent still listed)
+LALPATHLAB,Dr Lal PathLabs,Active - check symbol,LALPATHLAB,,2024-01-01,Active; same symbol on Yahoo
+CERA,Cera Sanitaryware,Active - check symbol,CERA,,2024-01-01,Active; same symbol on Yahoo
+RALLIS,Rallis India,Active - check symbol,RALLIS,,2024-01-01,Active; Tata group company
+SUDARSCHEM,Sudarshan Chemical,Active - check symbol,SUDARSCHEM,,2024-01-01,Active; same symbol on Yahoo
+VINATIORGA,Vinati Organics,Active - check symbol,VINATIORGA,,2024-01-01,Active; same symbol on Yahoo
+NILKAMAL,Nilkamal Ltd,Active - check symbol,NILKAMAL,,2024-01-01,Active; same symbol on Yahoo
+ADVENZYMES,Advanced Enzyme Technologies,Active - check symbol,ADVENZYMES,,2024-01-01,Active; same symbol on Yahoo
+AKZOINDIA,Akzo Nobel India,Active - check symbol,AKZOINDIA,,2024-01-01,Active; same symbol on Yahoo
+ALLCARGO,Allcargo Logistics,Demerged,ALLCARGOGATI,Multiple entities post-demerger,2023-01-01,Demerged into multiple entities; complex
+BAJAJCON,Bajaj Consumer Care,Active - check symbol,BAJAJCON,,2024-01-01,Active; same symbol on Yahoo
+BAJAJELEC,Bajaj Electricals,Active - check symbol,BAJAJELEC,,2024-01-01,Active; same symbol on Yahoo
+GODREJAGRO,Godrej Agrovet,Active - check symbol,GODREJAGRO,,2024-01-01,Active; separate listed entity from Godrej CP/Industries
+APLLTD,APL Apollo Tubes,Active - check symbol,APLAPOLLO,,2024-01-01,Angel uses APLAPOLLO; research universe uses APLLTD
+AVANTIFEED,Avanti Feeds,Active - check symbol,AVANTIFEED,,2024-01-01,Active; same symbol on Yahoo
+BALMLAWRIE,Balmer Lawrie,Active - check symbol,BALMLAWRIE,,2024-01-01,Active; same symbol on Yahoo
+HATSUN,Hatsun Agro Products,Active - check symbol,HATSUN,,2024-01-01,Active; same symbol on Yahoo
+AEGISCHEM,Aegis Chemicals,Ambiguous,AEGISLOG|AEGISVOPAK,,2024-01-01,Two Aegis entities exist on Angel; AEGISLOG=Aegis Logistics AEGISVOPAK=Aegis Vopak; AEGISCHEM may refer to neither

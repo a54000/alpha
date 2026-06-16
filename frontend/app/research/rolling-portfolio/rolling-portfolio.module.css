@@ -1,0 +1,39 @@
+.resultLayout {
+  display: block;
+  margin-top: 16px;
+}
+
+.mainStack {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.portfolioMetrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.skipList {
+  display: grid;
+  gap: 6px;
+  min-width: 260px;
+}
+
+.skipList div {
+  color: #9a3412;
+  line-height: 1.35;
+}
+
+@media (max-width: 1100px) {
+  .portfolioMetrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .portfolioMetrics {
+    grid-template-columns: 1fr;
+  }
+}
