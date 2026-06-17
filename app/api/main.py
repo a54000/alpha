@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
+import os
+import subprocess
+import sys
 from typing import Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query
@@ -101,6 +104,29 @@ class RollingPortfolioPayload(BaseModel):
     weeks: int = Field(default=1, ge=1, le=260)
     initial_capital: float = Field(default=1_000_000, gt=0)
     recommendation_model: Literal["swing_v2_1", "sector_rotation_adx_1m3m"] = "swing_v2_1"
+
+
+class PipelineRunPayload(BaseModel):
+    business_date: date
+    portfolio_id: int = Field(default=1, ge=1)
+    portfolio_size: int = Field(default=10, ge=1, le=50)
+    max_candidate_rank: int = Field(default=5, ge=1, le=50)
+    dry_run: bool = False
+    sync_dry_run: bool = False
+    rebalance_paper: bool = True
+    resume: bool = False
+    from_step: Literal[
+        "",
+        "angel_data_sync",
+        "market_data_validation",
+        "daily_bar_refresh",
+        "feature_generation",
+        "swing_v2_1_scoring",
+        "recommendation_generation",
+        "decision_journal_capture",
+        "paper_portfolio_update",
+        "monitoring_report_generation",
+    ] = ""
 
 
 class DishaSyncPayload(BaseModel):
@@ -539,6 +565,89 @@ def trades(
 @app.get("/pipeline/status")
 def pipeline_status(service: CockpitReadService = Depends(get_service)) -> dict[str, object]:
     return service.pipeline_status()
+
+
+@app.post("/pipeline/run")
+def run_pipeline(payload: PipelineRunPayload) -> dict[str, object]:
+    logs_dir = REPO_ROOT / "logs" / "daily_pipeline"
+    reports_dir = REPO_ROOT / "reports"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    reports_dir.mkdir(parents=True, exist_ok=True)
+
+    business_date = payload.business_date.isoformat()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_path = logs_dir / f"daily_pipeline_ui_{business_date}_{timestamp}.log"
+    summary_path = reports_dir / f"phase4b_full_daily_pipeline_{business_date}.json"
+
+    command = [
+        sys.executable,
+        "scripts/run_full_daily_pipeline.py",
+        "--business-date",
+        business_date,
+        "--portfolio-id",
+        str(payload.portfolio_id),
+        "--portfolio-size",
+        str(payload.portfolio_size),
+        "--max-candidate-rank",
+        str(payload.max_candidate_rank),
+        "--output-json",
+        str(summary_path),
+    ]
+    if payload.dry_run:
+        command.append("--dry-run")
+    if payload.sync_dry_run:
+        command.append("--sync-dry-run")
+    if payload.rebalance_paper:
+        command.append("--rebalance-paper")
+    if payload.resume:
+        command.append("--resume")
+    if payload.from_step:
+        command.extend(["--from-step", payload.from_step])
+
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    log_handle = log_path.open("w", encoding="utf-8")
+    log_handle.write(f"[{datetime.now().isoformat()}] Starting UI-triggered pipeline\n")
+    log_handle.write(f"ProjectRoot={REPO_ROOT}\n")
+    log_handle.write(f"BusinessDate={business_date}\n")
+    log_handle.write(f"Command={' '.join(command)}\n\n")
+    log_handle.flush()
+
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=REPO_ROOT,
+            stdout=log_handle,
+            stderr=subprocess.STDOUT,
+            env=env,
+        )
+    except OSError as exc:
+        log_handle.close()
+        raise HTTPException(status_code=503, detail=f"Unable to start pipeline: {exc}") from exc
+
+    return {
+        "status": "started",
+        "pid": process.pid,
+        "business_date": business_date,
+        "log_path": str(log_path),
+        "summary_path": str(summary_path),
+        "command": command,
+        "what_this_does": [
+            "Syncs missing Angel 15-minute candles.",
+            "Validates latest market data.",
+            "Refreshes cleaned pilot daily bars.",
+            "Regenerates strategy features.",
+            "Computes scores and recommendations.",
+            "Captures recommendation explanations.",
+            "Updates the paper portfolio when enabled.",
+            "Generates monitoring output.",
+        ],
+        "safety": {
+            "broker_orders": False,
+            "strategy_changes": False,
+            "production_tables_modified": False,
+        },
+    }
 
 
 @app.get("/research/metrics")

@@ -2,6 +2,7 @@ import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState, ErrorState } from "@/components/StatePanel";
 import { safeApiGet } from "@/lib/api";
+import { PipelineRunPanel } from "./PipelineRunPanel";
 
 type Payload = {
   summary: Record<string, unknown>;
@@ -23,6 +24,7 @@ export default async function OperationsPage() {
   return (
     <>
       <PageHeader title="Operations" subtitle="Pipeline execution status, failures, and data freshness." />
+      <PipelineRunPanel />
       <div className="grid cols-4">
         <MetricCard label="Status" value={String(data.summary.status ?? "unknown")} tone={data.summary.status === "failed" ? "bad" : "ok"} />
         <MetricCard label="Failed Steps" value={String(data.summary.failed_steps ?? 0)} />

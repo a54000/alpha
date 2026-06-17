@@ -540,6 +540,67 @@ th {
   color: var(--accent);
 }
 
+.checkbox-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.checkbox-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.explain-box,
+.success-box,
+.error-banner {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.explain-box {
+  margin-top: 14px;
+  background: #f8fafc;
+}
+
+.explain-box ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.success-box {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.success-box dl {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 6px 12px;
+  margin: 10px 0;
+}
+
+.success-box dt {
+  color: var(--muted);
+}
+
+.success-box dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.error-banner {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: var(--danger);
+}
+
 .helper-text {
   margin: 10px 0 0;
   color: var(--muted);
