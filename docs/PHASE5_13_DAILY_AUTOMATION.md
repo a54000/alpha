@@ -28,16 +28,16 @@ scripts/uninstall_daily_pipeline_task.ps1
 
 ## Daily Entry Point
 
-The scheduled task runs:
+The daily scheduled task runs without weekly rebalance:
 
 ```powershell
-scripts\run_full_daily_pipeline.ps1 -PortfolioId 1 -PortfolioSize 10 -MaxCandidateRank 5 -RebalancePaper
+scripts\run_full_daily_pipeline.ps1 -PortfolioId 1 -PortfolioSize 10 -MaxCandidateRank 5
 ```
 
 The wrapper calls:
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\run_full_daily_pipeline.py --business-date <today> --portfolio-id 1 --portfolio-size 10 --max-candidate-rank 5 --rebalance-paper
+.\.venv\Scripts\python.exe scripts\run_full_daily_pipeline.py --business-date <today> --portfolio-id 1 --portfolio-size 10 --max-candidate-rank 5
 ```
 
 ## Logs
@@ -76,11 +76,19 @@ Start with a dry-run scheduled task first:
 .\scripts\install_daily_pipeline_task.ps1 -StartTime "18:30" -PortfolioId 1 -DryRun -SyncDryRun -Replace
 ```
 
-After one successful dry-run schedule, install live automation:
+After one successful dry-run schedule, install live daily automation:
 
 ```powershell
 .\scripts\install_daily_pipeline_task.ps1 -StartTime "18:30" -PortfolioId 1 -Replace
 ```
+
+Install a separate weekly rebalance task only on the selected weekly rebalance day:
+
+```powershell
+.\scripts\install_daily_pipeline_task.ps1 -TaskName "NSE Research Weekly Paper Rebalance" -StartTime "18:30" -PortfolioId 1 -DaysOfWeek Monday -RebalancePaper -Replace
+```
+
+Change `-DaysOfWeek Monday` to the selected weekly entry/rebalance day if a different day is approved.
 
 The default task name is:
 
@@ -96,7 +104,13 @@ Dry-run:
 .\scripts\run_full_daily_pipeline.ps1 -BusinessDate 2026-06-12 -PortfolioId 1 -DryRun -SyncDryRun
 ```
 
-Live run:
+Daily live run:
+
+```powershell
+.\scripts\run_full_daily_pipeline.ps1 -BusinessDate 2026-06-12 -PortfolioId 1
+```
+
+Weekly rebalance run:
 
 ```powershell
 .\scripts\run_full_daily_pipeline.ps1 -BusinessDate 2026-06-12 -PortfolioId 1 -RebalancePaper

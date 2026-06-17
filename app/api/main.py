@@ -113,7 +113,7 @@ class PipelineRunPayload(BaseModel):
     max_candidate_rank: int = Field(default=5, ge=1, le=50)
     dry_run: bool = False
     sync_dry_run: bool = False
-    rebalance_paper: bool = True
+    rebalance_paper: bool = False
     resume: bool = False
     from_step: Literal[
         "",

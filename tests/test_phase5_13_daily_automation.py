@@ -25,10 +25,14 @@ def test_daily_pipeline_task_installer_registers_scheduled_task():
     content = read_script("install_daily_pipeline_task.ps1")
 
     assert "New-ScheduledTaskAction" in content
-    assert "New-ScheduledTaskTrigger -Daily" in content
+    assert "New-ScheduledTaskTrigger -Weekly" in content
     assert "Register-ScheduledTask" in content
     assert "run_full_daily_pipeline.ps1" in content
     assert "18:30" in content
+    assert "[switch]$RebalancePaper" in content
+    assert "[string[]]$DaysOfWeek" in content
+    assert "-DaysOfWeek $DaysOfWeek" in content
+    assert 'if ($RebalancePaper)' in content
 
 
 def test_daily_pipeline_task_uninstaller_unregisters_task():

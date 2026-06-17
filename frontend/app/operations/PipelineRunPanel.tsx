@@ -51,7 +51,7 @@ export function PipelineRunPanel() {
     max_candidate_rank: 5,
     dry_run: false,
     sync_dry_run: false,
-    rebalance_paper: true,
+    rebalance_paper: false,
     resume: false,
     from_step: ""
   });
@@ -84,7 +84,8 @@ export function PipelineRunPanel() {
           <h2>Run Daily Pipeline</h2>
           <p className="subtitle">
             Starts the same controlled script used by the scheduled task. It syncs market data, rebuilds pilot artifacts,
-            generates recommendations, and updates the paper portfolio. It does not place broker orders.
+            generates recommendations, and marks the paper portfolio. New entries are taken only when weekly rebalance is enabled.
+            It does not place broker orders.
           </p>
         </div>
       </div>
@@ -117,7 +118,7 @@ export function PipelineRunPanel() {
       <div className="checkbox-row">
         <label><input type="checkbox" checked={form.dry_run} onChange={(event) => setField("dry_run", event.target.checked)} /> Dry run</label>
         <label><input type="checkbox" checked={form.sync_dry_run} onChange={(event) => setField("sync_dry_run", event.target.checked)} /> Sync dry run</label>
-        <label><input type="checkbox" checked={form.rebalance_paper} onChange={(event) => setField("rebalance_paper", event.target.checked)} /> Update paper portfolio</label>
+        <label><input type="checkbox" checked={form.rebalance_paper} onChange={(event) => setField("rebalance_paper", event.target.checked)} /> Weekly rebalance: allow new entries</label>
         <label><input type="checkbox" checked={form.resume} onChange={(event) => setField("resume", event.target.checked)} /> Resume completed steps</label>
       </div>
 
@@ -126,7 +127,8 @@ export function PipelineRunPanel() {
         <ul>
           <li>Fetches only missing Angel 15-minute candles.</li>
           <li>Refreshes daily bars, features, scores, recommendations, and recommendation journal.</li>
-          <li>Updates paper portfolio only when “Update paper portfolio” is selected.</li>
+          <li>Daily mode marks existing paper positions to market but does not open new positions.</li>
+          <li>Weekly rebalance mode allows new entries if slots are free and entry rules pass.</li>
           <li>Writes logs under <code>logs/daily_pipeline</code> and summary JSON under <code>reports</code>.</li>
         </ul>
       </div>

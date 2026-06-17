@@ -6,8 +6,10 @@ param(
     [int]$PortfolioSize = 10,
     [int]$MaxCandidateRank = 5,
     [bool]$WeekdaysOnly = $true,
+    [string[]]$DaysOfWeek = @("Monday", "Tuesday", "Wednesday", "Thursday", "Friday"),
     [switch]$DryRun,
     [switch]$SyncDryRun,
+    [switch]$RebalancePaper,
     [switch]$NoRebalance,
     [switch]$Replace
 )
@@ -33,6 +35,9 @@ if ($Existing -and -not $Replace) {
 if ($Existing -and $Replace) {
     Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
 }
+if ($WeekdaysOnly -and $DaysOfWeek.Count -eq 0) {
+    throw "DaysOfWeek must include at least one day when WeekdaysOnly is true."
+}
 
 $WrapperArgs = @(
     "-NoProfile",
@@ -49,7 +54,10 @@ if ($DryRun) {
 if ($SyncDryRun) {
     $WrapperArgs += "-SyncDryRun"
 }
-if (-not $NoRebalance) {
+if ($RebalancePaper -and $NoRebalance) {
+    throw "Use either -RebalancePaper or -NoRebalance, not both."
+}
+if ($RebalancePaper) {
     $WrapperArgs += "-RebalancePaper"
 }
 
@@ -59,7 +67,7 @@ $Action = New-ScheduledTaskAction `
     -WorkingDirectory $ProjectRoot
 
 if ($WeekdaysOnly) {
-    $Trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday, Tuesday, Wednesday, Thursday, Friday -At $StartTime
+    $Trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $DaysOfWeek -At $StartTime
 }
 else {
     $Trigger = New-ScheduledTaskTrigger -Daily -At $StartTime
@@ -84,7 +92,7 @@ Register-ScheduledTask `
 
 Write-Host "Registered scheduled task: $TaskName"
 if ($WeekdaysOnly) {
-    Write-Host "Schedule: Monday-Friday at $StartTime"
+    Write-Host "Schedule: $($DaysOfWeek -join ', ') at $StartTime"
 }
 else {
     Write-Host "Schedule: daily at $StartTime"

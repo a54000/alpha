@@ -156,15 +156,14 @@ Recommended run time:
 18:30 IST, after market close
 ```
 
-Normal daily run:
+Normal daily run. This keeps data, recommendations, dashboards, and mark-to-market fresh. It does not open new paper positions:
 
 ```powershell
 .\scripts\run_full_daily_pipeline.ps1 `
   -BusinessDate <YYYY-MM-DD> `
   -PortfolioId 1 `
   -PortfolioSize 10 `
-  -MaxCandidateRank 5 `
-  -RebalancePaper
+  -MaxCandidateRank 5
 ```
 
 Example:
@@ -172,6 +171,16 @@ Example:
 ```powershell
 .\scripts\run_full_daily_pipeline.ps1 `
   -BusinessDate 2026-06-17 `
+  -PortfolioId 1 `
+  -PortfolioSize 10 `
+  -MaxCandidateRank 5
+```
+
+Weekly rebalance run. Use this only on the chosen weekly entry cycle:
+
+```powershell
+.\scripts\run_full_daily_pipeline.ps1 `
+  -BusinessDate <YYYY-MM-DD> `
   -PortfolioId 1 `
   -PortfolioSize 10 `
   -MaxCandidateRank 5 `
@@ -304,7 +313,7 @@ NSE Research Daily Paper Pipeline
   -Replace
 ```
 
-### 9.2 Install Live Task
+### 9.2 Install Live Daily Task
 
 ```powershell
 .\scripts\install_daily_pipeline_task.ps1 `
@@ -313,20 +322,38 @@ NSE Research Daily Paper Pipeline
   -Replace
 ```
 
-### 9.3 Verify Task
+This daily task does not include `-RebalancePaper`.
+
+### 9.3 Install Weekly Rebalance Task
+
+Use a separate task name and include `-RebalancePaper` only for the weekly rebalance job:
+
+```powershell
+.\scripts\install_daily_pipeline_task.ps1 `
+  -TaskName "NSE Research Weekly Paper Rebalance" `
+  -StartTime "18:30" `
+  -PortfolioId 1 `
+  -DaysOfWeek Monday `
+  -RebalancePaper `
+  -Replace
+```
+
+Change `-DaysOfWeek Monday` if the approved weekly entry/rebalance day is different.
+
+### 9.4 Verify Task
 
 ```powershell
 Get-ScheduledTask -TaskName "NSE Research Daily Paper Pipeline"
 Get-ScheduledTaskInfo -TaskName "NSE Research Daily Paper Pipeline"
 ```
 
-### 9.4 Run Task Manually
+### 9.5 Run Task Manually
 
 ```powershell
 Start-ScheduledTask -TaskName "NSE Research Daily Paper Pipeline"
 ```
 
-### 9.5 Remove Task
+### 9.6 Remove Task
 
 ```powershell
 .\scripts\uninstall_daily_pipeline_task.ps1
@@ -432,6 +459,10 @@ Run one paper update:
   --rebalance `
   --output-json reports\latest_paper_update.json
 ```
+
+For daily mark-to-market only, omit `--rebalance`.
+
+For weekly new-entry rebalance, include `--rebalance`.
 
 Important statuses:
 
@@ -695,4 +726,3 @@ If something looks wrong:
 7. If data is missing, rerun sync for the affected symbol/date.
 8. Resume the pipeline.
 9. Document the incident and recovery action.
-
