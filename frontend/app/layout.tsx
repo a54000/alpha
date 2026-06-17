@@ -1,7 +1,7 @@
 import "./globals.css";
 import "antd/dist/reset.css";
 import Link from "next/link";
-import { Activity, Briefcase, ClipboardList, FileSearch, Repeat2, Search } from "lucide-react";
+import { Activity, Briefcase, ClipboardList, FileSearch, Repeat2, Search, SlidersHorizontal } from "lucide-react";
 
 export const metadata = {
   title: "Swing Research Cockpit",
@@ -13,6 +13,7 @@ const nav = [
   { href: "/recommendations", label: "Recommendations", icon: ClipboardList },
   { href: "/stock-analysis", label: "Stock Analysis", icon: Search },
   { href: "/portfolio", label: "Portfolio", icon: Briefcase },
+  { href: "/operations", label: "Operations", icon: SlidersHorizontal },
   { href: "/research/rolling-portfolio", label: "Rolling Portfolio", icon: Repeat2 },
   { href: "/research/trade-analysis", label: "Trade Analysis", icon: FileSearch }
 ];
