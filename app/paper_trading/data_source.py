@@ -167,6 +167,7 @@ class PilotPhase2APaperTradingDataSource(PaperTradingDataSource):
                     WHERE date = :signal_date
                       AND model = :model
                       AND rank <= :max_rank
+                      AND COALESCE(sector_points, 0) > 0
                     ORDER BY rank ASC, symbol ASC
                     """
                 ),

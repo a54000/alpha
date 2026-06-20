@@ -21,16 +21,26 @@ export default async function OperationsPage() {
     );
   }
   const data = result.data;
+  const latestStep = data.steps[0] || {};
   return (
     <>
       <PageHeader title="Operations" subtitle="Pipeline execution status, failures, and data freshness." />
       <PipelineRunPanel />
       <div className="grid cols-4">
         <MetricCard label="Status" value={String(data.summary.status ?? "unknown")} tone={data.summary.status === "failed" ? "bad" : "ok"} />
-        <MetricCard label="Failed Steps" value={String(data.summary.failed_steps ?? 0)} />
-        <MetricCard label="Latest Candle" value={String(data.summary.latest_candle_at ?? "n/a")} />
-        <MetricCard label="Latest Recs" value={String(data.summary.latest_recommendation_date ?? "n/a")} />
+        <MetricCard label="Running" value={String(latestStep.step_name ?? data.summary.current_step ?? "n/a")} />
+        <MetricCard label="Done" value={String(data.summary.last_completed_step ?? latestStep.step_name ?? "n/a")} />
+        <MetricCard label="Failures" value={String(data.summary.failed_steps ?? 0)} />
       </div>
+      <section className="panel" style={{ marginTop: 16 }}>
+        <h2>Run Status</h2>
+        <dl>
+          <dt>Current step</dt><dd>{String(latestStep.step_name ?? data.summary.current_step ?? "n/a")}</dd>
+          <dt>Last completed step</dt><dd>{String(data.summary.last_completed_step ?? "n/a")}</dd>
+          <dt>Failures</dt><dd>{String(data.summary.failed_steps ?? 0)}</dd>
+          <dt>Log path</dt><dd>{String(data.summary.latest_log_path ?? "n/a")}</dd>
+        </dl>
+      </section>
       {!data.steps.length ? <EmptyState message="No pipeline run rows were returned by the API." /> : null}
       <section className="panel table-wrap" style={{ marginTop: 16 }}>
         <h2>Pipeline Steps</h2>

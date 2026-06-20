@@ -157,6 +157,35 @@ class StockAnalysisService:
                 {"symbol": normalized},
             ).mappings().all()
 
+            rs_rows = connection.execute(
+                text(
+                    f"""
+                    SELECT date, close
+                    FROM {self.pilot_schema}.daily_bars_clean
+                    WHERE symbol = :symbol
+                    ORDER BY date DESC
+                    LIMIT 67
+                    """
+                ),
+                {"symbol": normalized},
+            ).mappings().all()
+
+            latest_date = latest_bar["date"]
+            nifty_rows = connection.execute(
+                text(
+                    """
+                    SELECT datetime::date AS date, close
+                    FROM ohlcv_15min
+                    WHERE symbol = 'NIFTY50'
+                      AND datetime::date <= :latest_date
+                      AND datetime::time <= '15:15:00'
+                    ORDER BY datetime DESC
+                    LIMIT 2600
+                    """
+                ),
+                {"latest_date": latest_date},
+            ).mappings().all()
+
         bars = [
             {
                 "date": row["date"].isoformat() if hasattr(row["date"], "isoformat") else row["date"],
@@ -170,16 +199,60 @@ class StockAnalysisService:
         ]
         feature = dict(latest_feature or {})
         recommendation = dict(latest_recommendation or {})
+        rs_score = self._rs_score_vs_nifty50(list(reversed(rs_rows)), list(reversed(nifty_rows)))
         return {
             "symbol": normalized,
             "latest_bar": self._serialize_mapping(latest_bar),
             "latest_features": self._serialize_mapping(feature),
             "latest_recommendation": self._serialize_mapping(recommendation),
             "recent_bars": bars,
-            "summary": self._summary(latest_bar, feature, recommendation),
+            "summary": self._summary(latest_bar, feature, recommendation, rs_score),
         }
 
-    def _summary(self, latest_bar: dict[str, object], feature: dict[str, object], recommendation: dict[str, object]) -> dict[str, object]:
+    @staticmethod
+    def _rs_score_vs_nifty50(stock_rows: list[dict[str, object]], nifty_rows: list[dict[str, object]], lookback: int = 66) -> float | None:
+        if len(stock_rows) < lookback + 1:
+            return None
+        stock_start = stock_rows[-(lookback + 1)]["close"]
+        stock_end = stock_rows[-1]["close"]
+        nifty_by_date: dict[date, object] = {}
+        for row in nifty_rows:
+            row_date = row["date"]
+            if isinstance(row_date, date):
+                nifty_by_date[row_date] = row["close"]
+        nifty_daily = sorted(nifty_by_date.items(), key=lambda item: item[0])
+        stock_end_date = stock_rows[-1]["date"]
+        stock_start_date = stock_rows[-(lookback + 1)]["date"]
+        nifty_start = StockAnalysisService._nearest_prior_close(nifty_daily, stock_start_date)
+        nifty_end = StockAnalysisService._nearest_prior_close(nifty_daily, stock_end_date)
+        if None in {stock_start, stock_end, nifty_start, nifty_end}:
+            return None
+        stock_start_f = float(stock_start)
+        nifty_start_f = float(nifty_start)
+        if stock_start_f <= 0 or nifty_start_f <= 0:
+            return None
+        stock_return = float(stock_end) / stock_start_f - 1
+        nifty_return = float(nifty_end) / nifty_start_f - 1
+        return stock_return - nifty_return
+
+    @staticmethod
+    def _nearest_prior_close(rows: list[tuple[date, object]], target: object) -> object | None:
+        if not isinstance(target, date):
+            return None
+        value = None
+        for row_date, close in rows:
+            if row_date > target:
+                break
+            value = close
+        return value
+
+    def _summary(
+        self,
+        latest_bar: dict[str, object],
+        feature: dict[str, object],
+        recommendation: dict[str, object],
+        rs_score_vs_nifty50_66d: float | None,
+    ) -> dict[str, object]:
         close = latest_bar.get("close")
         ema_200 = feature.get("ema_200")
         return {
@@ -190,6 +263,7 @@ class StockAnalysisService:
             "ema200_extension": feature.get("ema200_extension"),
             "adx_14": feature.get("adx_14"),
             "prior_20d_return": feature.get("prior_20d_return"),
+            "rs_score_vs_nifty50_66d": rs_score_vs_nifty50_66d,
             "sector_rank_3m": feature.get("sector_rank_3m"),
             "last_recommended_date": recommendation.get("date"),
             "last_rank": recommendation.get("rank"),

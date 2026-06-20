@@ -1,0 +1,51 @@
+For our current setup, the system is paper trading only. It does not place real broker orders.
+Entry Workflow
+Market data sync happens after market close
+The daily pipeline fetches latest Angel 15-minute candles.
+
+Daily bars and features are rebuilt
+It refreshes daily bars, sector strength, ADX, EMA, VWAP, scores, and recommendations.
+
+Recommendations are generated
+Current final strategy:
+Sector Rotation ADX Rolling 10
+Top weekly candidates
+Max candidate rank: 5
+Portfolio slots: 10
+
+Entry is not on signal day
+If a stock is recommended on day T, entry is checked on the next trading day, T+1.
+
+Entry time is 10:30 AM
+The system looks for the stock’s 10:30 15-minute candle open on T+1.
+Entry price = 10:30 candle open on next trading day
+
+VWAP quality check
+Before entering, it compares entry price against the signal day’s VWAP.
+If entry price > signal-day VWAP + 2.5%
+    skip trade
+Else
+    enter trade
+
+Portfolio slot check
+The system enters only if there is an available slot in the rolling 10 portfolio.
+It skips if:
+portfolio already has 10 open positions
+stock is already held
+stock was closed the same day
+10:30 candle is missing
+VWAP rule fails
+
+Position size
+It allocates roughly one slot of portfolio value:
+target position value = portfolio equity / 10
+
+Holding period
+Once entered, the stock is held for 20 trading days.
+
+Exit
+   Exit happens only on planned exit date:
+
+Exit = close price on planned 20th trading day
+So in plain English:
+A recommendation generated today is not bought immediately. The system waits until the next trading day, checks the 10:30 AM price, skips if the stock has already run too far above VWAP, and otherwise adds it to the paper portfolio if a slot is free.

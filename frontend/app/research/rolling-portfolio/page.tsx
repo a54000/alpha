@@ -131,13 +131,7 @@ function positiveCapital(value: string | undefined): number {
 
 function skippedText(item: WeeklyLog["skipped"][number], entryDate?: string): string {
   if (item.reason === "entry_gt_prevday_vwap_threshold") {
-    const detail = item.entry_vs_reference_vwap_pct === undefined
-      ? ""
-      : ` because entry was ${pct(item.entry_vs_reference_vwap_pct)} above previous-day VWAP`;
-    const prices = item.entry_price !== undefined && item.reference_vwap !== undefined
-      ? ` (entry ${money(item.entry_price)}, VWAP ${money(item.reference_vwap)})`
-      : "";
-    return `${item.symbol}: skipped on ${entryDate || "entry date"}${detail}${prices}`;
+    return `${item.symbol}: skipped on ${entryDate || "entry date"} by entry-quality check`;
   }
   return `${item.symbol}: skipped on ${entryDate || "entry date"} - ${item.reason}`;
 }
@@ -202,7 +196,7 @@ export default async function RollingPortfolioPage({ searchParams }: PageProps) 
     <>
       <PageHeader
         title="Rolling Portfolio Backtest"
-        subtitle="Step through Sector Rotation ADX recommendation cohorts using the preferred 10-slot construction."
+        subtitle="Step through SectorEdge 10 recommendation cohorts."
       />
 
       <section className="panel">
@@ -249,7 +243,7 @@ export default async function RollingPortfolioPage({ searchParams }: PageProps) 
 
       <p className="helper-text">
         Any date can be selected. The simulation uses the first available recommendation week on or after the selected date.
-        Signal model: {strategyLabel(recommendationModel)}. Available recommendations: {defaults.earliest_recommendation_date || "n/a"} to {defaults.latest_recommendation_date || "n/a"}.
+        Strategy: {strategyLabel(recommendationModel)}. Available recommendations: {defaults.earliest_recommendation_date || "n/a"} to {defaults.latest_recommendation_date || "n/a"}.
       </p>
 
       {result.error ? <div style={{ marginTop: 16 }}><ErrorState message={result.error} /></div> : null}
@@ -284,8 +278,8 @@ export default async function RollingPortfolioPage({ searchParams }: PageProps) 
             <table style={{ marginTop: 16 }}>
               <tbody>
                 <tr><td>Weekly candidate cap</td><td>Top {data.summary.max_candidate_rank ?? 5}</td></tr>
-                <tr><td>Entry rule</td><td>{data.summary.entry_time === "10:30:00" ? "10:30 candle open" : data.summary.entry_time || "daily open"}</td></tr>
-                <tr><td>VWAP skip</td><td>{data.summary.vwap_skip_threshold === null || data.summary.vwap_skip_threshold === undefined ? "n/a" : `Skip above previous-day VWAP + ${(data.summary.vwap_skip_threshold * 100).toFixed(1)}%`}</td></tr>
+                <tr><td>Entry timing</td><td>{data.summary.entry_time === "10:30:00" ? "After market open" : "Standard entry timing"}</td></tr>
+                <tr><td>Entry quality</td><td>{data.summary.vwap_skip_threshold === null || data.summary.vwap_skip_threshold === undefined ? "n/a" : "Quality check enabled"}</td></tr>
                 <tr><td>Holding period</td><td>{data.summary.holding_period ?? 20} trading days</td></tr>
                 <tr><td>Closed trades so far</td><td>{data.summary.closed_trades ?? 0}</td></tr>
               </tbody>

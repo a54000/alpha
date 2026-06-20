@@ -8,10 +8,13 @@ from fastapi.testclient import TestClient
 
 from app.api.main import app, get_trade_analysis_service
 from app.api.trade_analysis_service import (
+    AnalysisPosition,
     TradeAnalysisRequest,
     TradeAnalysisValidationError,
     financial_year_returns,
+    mark_price,
     nth_trading_day_after,
+    positions_value,
     render_weekly_equity_svg,
     reconstruct_trades,
     validate_request,
@@ -108,6 +111,32 @@ def test_reconstruct_trades_calculates_pnl_and_charges():
     assert result["summary"]["net_pnl"] == pytest.approx(trade["gross_pnl"] - trade["charges"])
     assert result["summary"]["total_return"] == pytest.approx(result["summary"]["net_pnl"] / 100_000)
     assert result["summary"]["ending_value"] == pytest.approx(100_000 + result["summary"]["net_pnl"])
+
+
+def test_positions_value_carries_forward_latest_close_for_missing_mark_date():
+    dates = trading_dates(3)
+    position = AnalysisPosition(
+        symbol="AAA",
+        sector="IT",
+        signal_date=dates[0],
+        entry_date=dates[0],
+        entry_price=100.0,
+        quantity=10.0,
+        planned_exit_date=dates[-1],
+        rank=1,
+        score=80.0,
+        entry_value=1000.0,
+        buy_charges={"charges": 0.0},
+    )
+    prices = {
+        "AAA": {
+            dates[0]: {"open": 100.0, "close": 101.0},
+            dates[2]: {"open": 103.0, "close": 104.0},
+        }
+    }
+
+    assert mark_price(prices, "AAA", dates[1], "close") == pytest.approx(101.0)
+    assert positions_value([position], prices, dates[1], "close") == pytest.approx(1010.0)
 
 
 def test_exit_date_excludes_special_session_and_counts_entry_as_day_one():
@@ -222,9 +251,8 @@ def test_trade_analysis_frontend_page_wires_api_and_controls():
     source = (REPO_ROOT / "frontend" / "app" / "research" / "trade-analysis" / "page.tsx").read_text(encoding="utf-8")
 
     assert "/research/trade-analysis/run" in source
-    assert "TOP5_WEEKLY" in source
-    assert "TOP10_WEEKLY" in source
-    assert "TOP10_SECTOR_CAP" in source
+    assert "SECTOR_ROTATION_ADX_ROLLING10" in source
+    assert "SectorEdge 10" in source
     assert "Generate Trade Analysis" in source
     assert "trades.csv" in source
     assert "summary.md" in source
@@ -234,14 +262,14 @@ def test_trade_analysis_frontend_page_wires_api_and_controls():
 
 def test_rolling_portfolio_frontend_page_wires_api_and_controls():
     source = (REPO_ROOT / "frontend" / "app" / "research" / "rolling-portfolio" / "page.tsx").read_text(encoding="utf-8")
-    layout = (REPO_ROOT / "frontend" / "app" / "layout.tsx").read_text(encoding="utf-8")
+    nav = (REPO_ROOT / "frontend" / "components" / "SidebarNav.tsx").read_text(encoding="utf-8")
 
     assert "/research/rolling-portfolio/simulate" in source
     assert "/research/rolling-portfolio/defaults" in source
     assert "Next Week" in source
     assert "Run From Date" in source
-    assert "FY Returns" in source
+    assert "Step through SectorEdge 10" in source
     assert "financial_year_returns" in source
     assert "Weekly Recommendation Log" in source
     assert "Open Positions" in source
-    assert "/research/rolling-portfolio" in layout
+    assert "/research/rolling-portfolio" in nav

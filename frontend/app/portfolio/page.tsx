@@ -34,12 +34,6 @@ export default async function PortfolioPage() {
         <MetricCard label="Exposure" value={pct(data.risk.exposure)} />
         <MetricCard label="Open Positions" value={String(data.summary.open_positions ?? data.positions.length)} />
       </div>
-      {data.summary.latest_paper_update_message ? (
-        <section className="panel" style={{ marginTop: 16 }}>
-          <h2>Paper Trading Status</h2>
-          <p className="subtitle">{String(data.summary.latest_paper_update_message)}</p>
-        </section>
-      ) : null}
       <section className="panel table-wrap" style={{ marginTop: 16 }}>
         <h2>Holdings</h2>
         {!data.positions.length ? <p className="subtitle">No holdings returned by the API.</p> : null}

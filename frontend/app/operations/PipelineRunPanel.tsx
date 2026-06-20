@@ -20,24 +20,8 @@ type PipelineRunPayload = {
   portfolio_size: number;
   max_candidate_rank: number;
   dry_run: boolean;
-  sync_dry_run: boolean;
-  rebalance_paper: boolean;
   resume: boolean;
-  from_step: string;
 };
-
-const steps = [
-  "",
-  "angel_data_sync",
-  "market_data_validation",
-  "daily_bar_refresh",
-  "feature_generation",
-  "swing_v2_1_scoring",
-  "recommendation_generation",
-  "decision_journal_capture",
-  "paper_portfolio_update",
-  "monitoring_report_generation"
-];
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -50,10 +34,7 @@ export function PipelineRunPanel() {
     portfolio_size: 10,
     max_candidate_rank: 5,
     dry_run: false,
-    sync_dry_run: false,
-    rebalance_paper: false,
     resume: false,
-    from_step: ""
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PipelineRunResponse | null>(null);
@@ -81,11 +62,10 @@ export function PipelineRunPanel() {
     <section className="panel" style={{ marginTop: 16 }}>
       <div className="section-heading">
         <div>
-          <h2>Run Daily Pipeline</h2>
+          <h2>Run EOD Sync</h2>
           <p className="subtitle">
-            Starts the same controlled script used by the scheduled task. It syncs market data, rebuilds pilot artifacts,
-            generates recommendations, and marks the paper portfolio. New entries are taken only when weekly rebalance is enabled.
-            It does not place broker orders.
+            Starts the controlled end-of-day pipeline used by the scheduled task. It syncs market data, rebuilds features,
+            generates recommendations, and updates the paper portfolio without placing broker orders.
           </p>
         </div>
       </div>
@@ -103,51 +83,28 @@ export function PipelineRunPanel() {
           Portfolio slots
           <input type="number" min={1} max={50} value={form.portfolio_size} onChange={(event) => setField("portfolio_size", Number(event.target.value))} />
         </label>
-        <label>
-          Max candidate rank
-          <input type="number" min={1} max={50} value={form.max_candidate_rank} onChange={(event) => setField("max_candidate_rank", Number(event.target.value))} />
-        </label>
-        <label>
-          Start from step
-          <select value={form.from_step} onChange={(event) => setField("from_step", event.target.value)}>
-            {steps.map((step) => <option key={step || "all"} value={step}>{step || "Run all steps"}</option>)}
-          </select>
-        </label>
       </div>
 
       <div className="checkbox-row">
         <label><input type="checkbox" checked={form.dry_run} onChange={(event) => setField("dry_run", event.target.checked)} /> Dry run</label>
-        <label><input type="checkbox" checked={form.sync_dry_run} onChange={(event) => setField("sync_dry_run", event.target.checked)} /> Sync dry run</label>
-        <label><input type="checkbox" checked={form.rebalance_paper} onChange={(event) => setField("rebalance_paper", event.target.checked)} /> Weekly rebalance: allow new entries</label>
-        <label><input type="checkbox" checked={form.resume} onChange={(event) => setField("resume", event.target.checked)} /> Resume completed steps</label>
-      </div>
-
-      <div className="explain-box">
-        <strong>What this does:</strong>
-        <ul>
-          <li>Fetches only missing Angel 15-minute candles.</li>
-          <li>Refreshes daily bars, features, scores, recommendations, and recommendation journal.</li>
-          <li>Daily mode marks existing paper positions to market but does not open new positions.</li>
-          <li>Weekly rebalance mode allows new entries if slots are free and entry rules pass.</li>
-          <li>Writes logs under <code>logs/daily_pipeline</code> and summary JSON under <code>reports</code>.</li>
-        </ul>
+        <label><input type="checkbox" checked={form.resume} onChange={(event) => setField("resume", event.target.checked)} /> Resume from last incomplete step</label>
       </div>
 
       <button className="primary-button" type="button" onClick={runPipeline} disabled={loading}>
-        {loading ? "Starting..." : "Start Pipeline"}
+        {loading ? "Starting..." : "Run EOD Sync"}
       </button>
 
       {error ? <div className="error-banner" style={{ marginTop: 12 }}>{error}</div> : null}
       {result ? (
         <div className="success-box" style={{ marginTop: 12 }}>
-          <strong>Pipeline started.</strong>
+          <strong>EOD sync started.</strong>
           <dl>
             <dt>Process ID</dt><dd>{result.pid}</dd>
             <dt>Business date</dt><dd>{result.business_date}</dd>
             <dt>Log file</dt><dd>{result.log_path}</dd>
             <dt>Summary file</dt><dd>{result.summary_path}</dd>
           </dl>
-          <p className="subtitle">Refresh this page after a minute to see step progress in the table below.</p>
+          <p className="subtitle">Refresh this page after a minute to see the latest run status below.</p>
         </div>
       ) : null}
     </section>

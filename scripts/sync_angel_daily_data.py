@@ -79,6 +79,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--bootstrap-lookback-days", type=int, default=DEFAULT_LOOKBACK_DAYS)
     parser.add_argument("--chunk-days", type=int, default=DEFAULT_CHUNK_DAYS)
     parser.add_argument("--sleep-seconds", type=float, default=0.5)
+    parser.add_argument("--rate-limit-sleep-seconds", type=float, default=60.0)
     parser.add_argument("--retries", type=int, default=3)
     parser.add_argument("--symbol-limit", type=int)
     parser.add_argument("--symbols", help="Comma-separated symbol allowlist for targeted sync.")
@@ -103,7 +104,7 @@ def parse_dt(value: str | None) -> datetime | None:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
-def login_to_angel() -> CandleClient:
+def login_to_angel(retries: int = 3, sleep_seconds: float = 2.0) -> CandleClient:
     try:
         from SmartApi.smartConnect import SmartConnect
         import pyotp
@@ -120,12 +121,24 @@ def login_to_angel() -> CandleClient:
     if missing:
         raise RuntimeError(f"Missing Angel credentials: {', '.join(missing)}")
 
-    client = SmartConnect(api_key=required["ANGEL_API_KEY"])
-    totp = pyotp.TOTP(required["ANGEL_TOTP_SECRET"]).now()
-    response = client.generateSession(required["ANGEL_CLIENT_ID"], required["ANGEL_PASSWORD"], totp)
-    if not response.get("status"):
-        raise RuntimeError(f"Angel login failed: {response.get('message') or response}")
-    return client
+    last_error: Exception | None = None
+    for attempt in range(1, max(1, retries) + 1):
+        try:
+            client = SmartConnect(api_key=required["ANGEL_API_KEY"])
+            totp = pyotp.TOTP(required["ANGEL_TOTP_SECRET"]).now()
+            response = client.generateSession(required["ANGEL_CLIENT_ID"], required["ANGEL_PASSWORD"], totp)
+            if not response.get("status"):
+                raise RuntimeError(f"Angel login failed: {response.get('message') or response}")
+            if attempt > 1:
+                logging.info("Angel login succeeded on retry %s", attempt)
+            return client
+        except Exception as exc:  # noqa: BLE001 - vendor login can fail with transient network errors
+            last_error = exc
+            if attempt < max(1, retries):
+                pause = sleep_seconds * attempt
+                logging.warning("Angel login attempt %s failed: %s; retrying in %.1fs", attempt, exc, pause)
+                time.sleep(pause)
+    raise RuntimeError(f"Angel login failed after {max(1, retries)} attempts: {last_error}") from last_error
 
 
 def ensure_fetch_progress_table(connection) -> None:
@@ -311,6 +324,7 @@ def fetch_candles_with_retry(
     end: datetime,
     retries: int,
     sleep_seconds: float,
+    rate_limit_sleep_seconds: float,
 ) -> list[list[object]]:
     if not symbol.token:
         raise RuntimeError(f"Missing Angel token for {symbol.symbol}. Set ANGEL_SYMBOL_TOKEN_MAP_JSON or ANGEL_SYMBOL_TOKEN_MAP_FILE.")
@@ -333,7 +347,9 @@ def fetch_candles_with_retry(
         except Exception as exc:  # noqa: BLE001 - retry boundary logs vendor/API failures
             last_error = exc
             if attempt < retries:
-                time.sleep(sleep_seconds * attempt)
+                message = str(exc).lower()
+                pause = rate_limit_sleep_seconds if "rate" in message or "access denied" in message else sleep_seconds * attempt
+                time.sleep(pause)
     raise RuntimeError(f"Angel candle request failed for {symbol.symbol}: {last_error}") from last_error
 
 
@@ -477,6 +493,7 @@ def sync_symbol(
     chunk_days: int,
     retries: int,
     sleep_seconds: float,
+    rate_limit_sleep_seconds: float,
     dry_run: bool,
     override_from: datetime | None = None,
 ) -> SymbolSyncResult:
@@ -500,7 +517,17 @@ def sync_symbol(
 
     fetched: list[list[object]] = []
     for chunk_start, chunk_end in iter_chunks(start, end, chunk_days):
-        fetched.extend(fetch_candles_with_retry(client, symbol, chunk_start, chunk_end, retries, sleep_seconds))
+        fetched.extend(
+            fetch_candles_with_retry(
+                client,
+                symbol,
+                chunk_start,
+                chunk_end,
+                retries,
+                sleep_seconds,
+                rate_limit_sleep_seconds,
+            )
+        )
         time.sleep(sleep_seconds)
 
     rows = normalize_candles(symbol.symbol, fetched)
@@ -541,7 +568,7 @@ def main() -> int:
             preview = ", ".join(missing_tokens[:20])
             suffix = "" if len(missing_tokens) <= 20 else f", ... ({len(missing_tokens)} total)"
             raise RuntimeError(f"Missing Angel tokens for tracked symbols: {preview}{suffix}")
-        client = None if args.dry_run else login_to_angel()
+        client = None if args.dry_run else login_to_angel(retries=args.retries, sleep_seconds=args.sleep_seconds)
         logging.info("tracking %s Angel symbols", len(symbols))
         for index, symbol in enumerate(symbols, start=1):
             logging.info("[%s/%s] syncing %s", index, len(symbols), symbol.symbol)
@@ -556,6 +583,7 @@ def main() -> int:
                     chunk_days=args.chunk_days,
                     retries=args.retries,
                     sleep_seconds=args.sleep_seconds,
+                    rate_limit_sleep_seconds=args.rate_limit_sleep_seconds,
                     dry_run=args.dry_run,
                     override_from=override_from,
                 )

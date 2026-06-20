@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PulseOI Control Room</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+
+    :root {
+      --bg: #0A0F1E;
+      --panel: #0E1A2E;
+      --surface: #112240;
+      --surface-2: #172B50;
+      --border: #1B3154;
+      --teal: #00D4AA;
+      --teal-soft: rgba(0, 212, 170, 0.12);
+      --teal-mid: rgba(0, 212, 170, 0.28);
+      --green: #22C55E;
+      --red: #F43F5E;
+      --amber: #F59E0B;
+      --slate: #64748B;
+      --text: #E7EEF8;
+      --dim: #98A9BF;
+      --mono: "JetBrains Mono", monospace;
+      --display: "Space Grotesk", sans-serif;
+      --body: "Inter", sans-serif;
+      --shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+    }
+
+    body {
+      color: var(--text);
+      font-family: var(--body);
+      background:
+        radial-gradient(circle at top left, rgba(0, 212, 170, 0.09), transparent 28%),
+        radial-gradient(circle at top right, rgba(245, 158, 11, 0.08), transparent 22%),
+        linear-gradient(180deg, #0a1225 0%, var(--bg) 42%, #08101d 100%);
+    }
+
+    .shell {
+      max-width: 1520px;
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .topbar,
+    .hero,
+    .rail,
+    .footer {
+      background: rgba(14, 26, 46, 0.94);
+      border: 1px solid rgba(27, 49, 84, 0.92);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .topbar {
+      border-radius: 18px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 220px;
+    }
+
+    .brand-mark {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--teal);
+      box-shadow: 0 0 0 0 rgba(0, 212, 170, 0.55);
+      animation: pulse 1.5s infinite;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-family: var(--display);
+      font-size: 18px;
+      letter-spacing: -0.03em;
+    }
+
+    .brand p {
+      margin: 2px 0 0;
+      font-size: 11px;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .topbar-strip {
+      margin-left: auto;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--dim);
+      font-family: var(--mono);
+    }
+
+    .chip.live {
+      color: var(--teal);
+      background: var(--teal-soft);
+      border-color: rgba(0, 212, 170, 0.35);
+    }
+
+    .hero {
+      border-radius: 28px;
+      padding: 22px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(0, 212, 170, 0.06), transparent 26%, transparent 74%, rgba(0, 212, 170, 0.05)),
+        repeating-linear-gradient(90deg, rgba(100, 116, 139, 0.06) 0 1px, transparent 1px 120px);
+      pointer-events: none;
+    }
+
+    .hero-grid {
+      position: relative;
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr) 320px;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .hero-label {
+      font-family: var(--display);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--slate);
+      margin-bottom: 12px;
+    }
+
+    .scorecard {
+      background: linear-gradient(180deg, rgba(17, 34, 64, 0.94), rgba(10, 18, 37, 0.98));
+      border: 1px solid rgba(0, 212, 170, 0.18);
+      border-radius: 22px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 100%;
+    }
+
+    .score-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .score-value {
+      font-family: var(--mono);
+      font-size: 60px;
+      line-height: 0.95;
+      color: var(--teal);
+      text-shadow: 0 0 24px rgba(0, 212, 170, 0.22);
+    }
+
+    .score-sub {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--dim);
+      line-height: 1.5;
+    }
+
+    .verdict {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 7px 12px;
+      background: var(--teal-soft);
+      border: 1px solid rgba(0, 212, 170, 0.35);
+      font-family: var(--display);
+      font-size: 12px;
+      color: var(--teal);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .score-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .mini-stat {
+      border-radius: 14px;
+      background: rgba(17, 34, 64, 0.8);
+      border: 1px solid rgba(27, 49, 84, 0.95);
+      padding: 10px 12px;
+    }
+
+    .mini-stat .k {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--slate);
+      margin-bottom: 4px;
+    }
+
+    .mini-stat .v {
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .matrix {
+      background: linear-gradient(180deg, rgba(17, 34, 64, 0.84), rgba(12, 20, 38, 0.94));
+      border: 1px solid rgba(27, 49, 84, 0.95);
+      border-radius: 22px;
+      padding: 18px;
+    }
+
+    .matrix-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .matrix-title h2 {
+      margin: 0;
+      font-family: var(--display);
+      font-size: 26px;
+      letter-spacing: -0.03em;
+    }
+
+    .matrix-title p {
+      margin: 0;
+      font-size: 12px;
+      color: var(--dim);
+    }
+
+    .matrix-grid {
+      display: grid;
+      grid-template-columns: 148px repeat(5, minmax(84px, 1fr));
+      gap: 8px;
+    }
+
+    .matrix-head,
+    .matrix-row-label,
+    .cell {
+      border-radius: 14px;
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      border: 1px solid rgba(27, 49, 84, 0.95);
+    }
+
+    .matrix-head {
+      min-height: 52px;
+      font-family: var(--display);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--slate);
+      background: rgba(17, 34, 64, 0.62);
+      padding: 8px;
+    }
+
+    .matrix-row-label {
+      justify-content: flex-start;
+      padding: 14px;
+      background: rgba(17, 34, 64, 0.78);
+      font-family: var(--display);
+      font-weight: 700;
+      gap: 8px;
+    }
+
+    .matrix-row-label small {
+      display: block;
+      margin-top: 3px;
+      color: var(--dim);
+      font-weight: 500;
+      font-size: 10px;
+    }
+
+    .cell {
+      background: rgba(17, 34, 64, 0.56);
+      position: relative;
+      overflow: hidden;
+      padding: 10px;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .cell.active {
+      background:
+        radial-gradient(circle at top, rgba(0, 212, 170, 0.18), transparent 56%),
+        rgba(0, 212, 170, 0.1);
+      border-color: rgba(0, 212, 170, 0.42);
+      box-shadow: inset 0 0 0 1px rgba(0, 212, 170, 0.12), 0 0 24px rgba(0, 212, 170, 0.09);
+    }
+
+    .cell.active.buy::after,
+    .cell.active.sell::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+    }
+
+    .cell.active.buy::after { background: var(--green); }
+    .cell.active.sell::after { background: var(--red); }
+
+    .cell .dir {
+      font-family: var(--display);
+      font-size: 10px;
+      color: var(--teal);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .cell .sig {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .cell .sub {
+      font-size: 10px;
+      color: var(--dim);
+    }
+
+    .cell.inactive .sig {
+      color: var(--slate);
+    }
+
+    .hero-side {
+      display: grid;
+      gap: 12px;
+    }
+
+    .brief {
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(17, 34, 64, 0.92), rgba(9, 16, 31, 0.95));
+      border: 1px solid rgba(27, 49, 84, 0.95);
+      padding: 16px;
+    }
+
+    .brief h3 {
+      margin: 0 0 10px;
+      font-family: var(--display);
+      font-size: 16px;
+    }
+
+    .brief p {
+      margin: 0;
+      color: var(--dim);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .checklist {
+      margin-top: 12px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .check {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(17, 34, 64, 0.6);
+      border: 1px solid rgba(27, 49, 84, 0.9);
+      font-size: 12px;
+    }
+
+    .check b {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr) 320px;
+      gap: 14px;
+    }
+
+    .rail {
+      border-radius: 22px;
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .section-title h3 {
+      margin: 0;
+      font-family: var(--display);
+      font-size: 15px;
+      letter-spacing: -0.02em;
+    }
+
+    .section-title span {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--slate);
+      font-family: var(--display);
+    }
+
+    .card {
+      background: rgba(17, 34, 64, 0.72);
+      border: 1px solid rgba(27, 49, 84, 0.95);
+      border-radius: 18px;
+      padding: 14px;
+    }
+
+    .flow-grid,
+    .regime-grid,
+    .risk-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .flow-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .flow-box {
+      background: rgba(10, 15, 30, 0.46);
+      border: 1px solid rgba(27, 49, 84, 0.9);
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    .flow-box .label,
+    .metric .label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--slate);
+      margin-bottom: 6px;
+    }
+
+    .flow-box .value,
+    .metric .value {
+      font-family: var(--mono);
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .flow-box .desc,
+    .metric .desc {
+      margin-top: 5px;
+      font-size: 11px;
+      color: var(--dim);
+      line-height: 1.5;
+    }
+
+    .stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .strip {
+      border-radius: 14px;
+      background: rgba(10, 15, 30, 0.42);
+      border: 1px solid rgba(27, 49, 84, 0.9);
+      padding: 12px;
+    }
+
+    .strip-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+    }
+
+    .strip-top b {
+      font-family: var(--display);
+      font-size: 13px;
+    }
+
+    .strip-top span {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--dim);
+    }
+
+    .strip p {
+      margin: 8px 0 0;
+      font-size: 12px;
+      color: var(--dim);
+      line-height: 1.6;
+    }
+
+    .center-col {
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .signal {
+      background: rgba(14, 26, 46, 0.96);
+      border: 1px solid rgba(27, 49, 84, 0.95);
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .signal-head {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(27, 49, 84, 0.95);
+      background: linear-gradient(90deg, rgba(17, 34, 64, 0.88), rgba(17, 34, 64, 0.42));
+    }
+
+    .signal-head h3 {
+      margin: 0;
+      font-family: var(--display);
+      font-size: 16px;
+    }
+
+    .signal-head p {
+      margin: 3px 0 0;
+      font-size: 12px;
+      color: var(--dim);
+    }
+
+    .pill {
+      margin-left: auto;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-family: var(--display);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border: 1px solid;
+      white-space: nowrap;
+    }
+
+    .pill.buy { color: var(--green); background: rgba(34, 197, 94, 0.12); border-color: rgba(34, 197, 94, 0.28); }
+    .pill.sell { color: var(--red); background: rgba(244, 63, 94, 0.12); border-color: rgba(244, 63, 94, 0.28); }
+    .pill.watch { color: var(--teal); background: var(--teal-soft); border-color: rgba(0, 212, 170, 0.28); }
+    .pill.caution { color: var(--amber); background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.28); }
+
+    .signal-body {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .metrics-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .metric {
+      border-radius: 14px;
+      background: rgba(10, 15, 30, 0.42);
+      border: 1px solid rgba(27, 49, 84, 0.9);
+      padding: 12px;
+    }
+
+    .bars {
+      display: grid;
+      gap: 8px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 130px 1fr 62px;
+      gap: 10px;
+      align-items: center;
+      font-size: 11px;
+    }
+
+    .bar-row span:first-child { color: var(--dim); }
+
+    .bar-bg {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(27, 49, 84, 0.95);
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: inherit;
+    }
+
+    .track {
+      position: relative;
+      height: 68px;
+      border-radius: 18px;
+      background: linear-gradient(90deg, rgba(244, 63, 94, 0.08), rgba(17, 34, 64, 0.72) 30%, rgba(17, 34, 64, 0.72) 70%, rgba(34, 197, 94, 0.08));
+      border: 1px solid rgba(27, 49, 84, 0.95);
+      overflow: hidden;
+    }
+
+    .marker {
+      position: absolute;
+      top: 8px;
+      bottom: 8px;
+      width: 2px;
+    }
+
+    .marker::before {
+      content: "";
+      position: absolute;
+      top: -4px;
+      left: -5px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      background: var(--bg);
+    }
+
+    .marker label {
+      position: absolute;
+      top: 16px;
+      transform: translateX(-50%);
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-family: var(--mono);
+      font-size: 10px;
+      background: rgba(10, 15, 30, 0.92);
+      border: 1px solid currentColor;
+      white-space: nowrap;
+    }
+
+    .reason {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(0, 212, 170, 0.08);
+      border: 1px solid rgba(0, 212, 170, 0.22);
+      font-size: 12px;
+      color: var(--text);
+      line-height: 1.65;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .table th,
+    .table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(27, 49, 84, 0.72);
+      text-align: left;
+    }
+
+    .table th {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--slate);
+      font-family: var(--display);
+    }
+
+    .table td:last-child,
+    .table th:last-child { text-align: right; }
+
+    .mono { font-family: var(--mono); }
+    .pos { color: var(--green); }
+    .neg { color: var(--red); }
+    .teal { color: var(--teal); }
+    .amber { color: var(--amber); }
+    .dim { color: var(--dim); }
+
+    .trade-card {
+      background: linear-gradient(180deg, rgba(17, 34, 64, 0.88), rgba(10, 15, 30, 0.92));
+      border: 1px solid rgba(0, 212, 170, 0.18);
+      border-radius: 18px;
+      padding: 14px;
+    }
+
+    .trade-card h4 {
+      margin: 0;
+      font-family: var(--display);
+      font-size: 17px;
+    }
+
+    .trade-card p {
+      margin: 6px 0 0;
+      color: var(--dim);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .trade-grid {
+      margin-top: 12px;
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .trade-box {
+      border-radius: 14px;
+      background: rgba(10, 15, 30, 0.45);
+      border: 1px solid rgba(27, 49, 84, 0.9);
+      padding: 12px;
+    }
+
+    .trade-box.full { grid-column: 1 / -1; }
+
+    .trade-box .label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--slate);
+      margin-bottom: 6px;
+    }
+
+    .trade-box .value {
+      font-family: var(--mono);
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .trade-box .hint {
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--dim);
+      line-height: 1.5;
+    }
+
+    .footer {
+      border-radius: 18px;
+      padding: 12px 16px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .footer .chip {
+      background: rgba(17, 34, 64, 0.62);
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0, 212, 170, 0.55); }
+      50% { box-shadow: 0 0 0 8px rgba(0, 212, 170, 0); }
+    }
+
+    @media (max-width: 1260px) {
+      .hero-grid,
+      .board {
+        grid-template-columns: 1fr;
+      }
+
+      .matrix-grid {
+        grid-template-columns: 130px repeat(5, minmax(72px, 1fr));
+      }
+    }
+
+    @media (max-width: 860px) {
+      .shell { padding: 12px; }
+      .matrix-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .matrix-head:first-child {
+        display: none;
+      }
+      .matrix-row-label {
+        grid-column: 1 / -1;
+      }
+      .metrics-3,
+      .trade-grid,
+      .flow-grid {
+        grid-template-columns: 1fr;
+      }
+      .bar-row {
+        grid-template-columns: 1fr;
+      }
+      .pill {
+        margin-left: 0;
+      }
+      .signal-head {
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="topbar">
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <div>
+          <h1>PulseOI Control Room</h1>
+          <p>Nifty / BankNifty intraday options system</p>
+        </div>
+      </div>
+      <div class="topbar-strip">
+        <div class="chip live">LIVE 10:42 IST · Refresh 60s</div>
+        <div class="chip">Nifty 24,412 <span class="pos">+87</span></div>
+        <div class="chip">BankNifty 52,180 <span class="pos">+210</span></div>
+        <div class="chip">India VIX 13.4</div>
+        <div class="chip">Session Window 10:30-11:15</div>
+      </div>
+    </section>
+
+    <section class="hero">
+      <div class="hero-grid">
+        <div class="scorecard">
+          <div>
+            <div class="hero-label">Current Read</div>
+            <div class="score-top">
+              <div>
+                <div class="score-value">3/5</div>
+                <div class="score-sub">Edges stacked for long continuation, but not enough for full-size aggression.</div>
+              </div>
+            </div>
+            <div style="margin-top:14px" class="verdict">Tradeable Long Bias</div>
+          </div>
+          <div class="score-meta">
+            <div class="mini-stat">
+              <div class="k">Direction</div>
+              <div class="v pos">BUY Lean</div>
+            </div>
+            <div class="mini-stat">
+              <div class="k">Size Rule</div>
+              <div class="v amber">0.8x</div>
+            </div>
+            <div class="mini-stat">
+              <div class="k">Invalidation</div>
+              <div class="v neg">VWAP Lose</div>
+            </div>
+            <div class="mini-stat">
+              <div class="k">Urgency</div>
+              <div class="v teal">Prime Window</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="matrix">
+          <div class="matrix-title">
+            <div>
+              <div class="hero-label">Signal Confluence Matrix</div>
+              <h2>Five edges, two directions, one decision layer</h2>
+            </div>
+            <p>Teal means active. Green/red side rails only indicate direction.</p>
+          </div>
+          <div class="matrix-grid">
+            <div class="matrix-head"></div>
+            <div class="matrix-head">OI Trap</div>
+            <div class="matrix-head">Max Pain + PCR</div>
+            <div class="matrix-head">OI Buildup</div>
+            <div class="matrix-head">VWAP + EMA</div>
+            <div class="matrix-head">FII Flow</div>
+
+            <div class="matrix-row-label">
+              <div>
+                Buy
+                <small>Long-side confirmation</small>
+              </div>
+            </div>
+            <div class="cell active buy">
+              <div class="dir">Active</div>
+              <div class="sig">TRAP REV</div>
+              <div class="sub">24,500 CE</div>
+            </div>
+            <div class="cell active buy">
+              <div class="dir">Active</div>
+              <div class="sig">PCR 1.42</div>
+              <div class="sub">Drift up</div>
+            </div>
+            <div class="cell inactive">
+              <div class="dir">Idle</div>
+              <div class="sig">-</div>
+              <div class="sub">No clean stack</div>
+            </div>
+            <div class="cell active buy">
+              <div class="dir">Active</div>
+              <div class="sig">EMA X</div>
+              <div class="sub">Above VWAP</div>
+            </div>
+            <div class="cell inactive">
+              <div class="dir">Idle</div>
+              <div class="sig">-</div>
+              <div class="sub">Mixed tape</div>
+            </div>
+
+            <div class="matrix-row-label">
+              <div>
+                Sell
+                <small>Short-side confirmation</small>
+              </div>
+            </div>
+            <div class="cell inactive">
+              <div class="dir">Idle</div>
+              <div class="sig">-</div>
+              <div class="sub">No trap</div>
+            </div>
+            <div class="cell inactive">
+              <div class="dir">Idle</div>
+              <div class="sig">-</div>
+              <div class="sub">No pin pull</div>
+            </div>
+            <div class="cell active sell">
+              <div class="dir">Active</div>
+              <div class="sig">SHORT↑</div>
+              <div class="sub">24,500 CE</div>
+            </div>
+            <div class="cell inactive">
+              <div class="dir">Idle</div>
+              <div class="sig">-</div>
+              <div class="sub">Trend intact</div>
+            </div>
+            <div class="cell inactive">
+              <div class="dir">Idle</div>
+              <div class="sig">-</div>
+              <div class="sub">No short bias</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-side">
+          <div class="brief">
+            <div class="hero-label">Operator Summary</div>
+            <h3>What the dashboard is saying right now</h3>
+            <p>Long setups are allowed if price holds above VWAP and the 24,400 PE support shelf stays defended. Because FII confirmation is incomplete, the system calls for reduced size instead of full risk.</p>
+          </div>
+          <div class="brief">
+            <div class="hero-label">Go / No-Go</div>
+            <div class="checklist">
+              <div class="check"><div class="dot" style="background:var(--green)"></div><div><b>Go if:</b> 9 EMA stays above 21 EMA and spot respects VWAP retest.</div></div>
+              <div class="check"><div class="dot" style="background:var(--amber)"></div><div><b>Reduce if:</b> PRO hedging expands or PCR rolls below 1.20.</div></div>
+              <div class="check"><div class="dot" style="background:var(--red)"></div><div><b>Abort if:</b> Nifty loses VWAP and call-side trap reverses into broad CE writing.</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="board">
+      <aside class="rail">
+        <div class="card">
+          <div class="section-title">
+            <h3>FII + Desk Context</h3>
+            <span>Pre-market anchor</span>
+          </div>
+          <div class="flow-grid">
+            <div class="flow-box">
+              <div class="label">FII Index Futures</div>
+              <div class="value pos">+₹840Cr</div>
+              <div class="desc">Net long carry from prior session keeps long-side trades permissible.</div>
+            </div>
+            <div class="flow-box">
+              <div class="label">FII Options</div>
+              <div class="value pos">Put Writer</div>
+              <div class="desc">Writers still defending downside, not yet a panic hedge.</div>
+            </div>
+            <div class="flow-box">
+              <div class="label">PRO Desks</div>
+              <div class="value neg">-₹240Cr</div>
+              <div class="desc">Hedging pressure means longs should not be oversized.</div>
+            </div>
+            <div class="flow-box">
+              <div class="label">Retail Positioning</div>
+              <div class="value amber">CE Buyers</div>
+              <div class="desc">Crowded upside participation raises failure risk on late entries.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">
+            <h3>Pre-Market Checklist</h3>
+            <span>Before first trade</span>
+          </div>
+          <div class="stack">
+            <div class="strip">
+              <div class="strip-top"><b>Event Calendar</b><span class="pos">Clear</span></div>
+              <p>No RBI, Fed, or scheduled event risk in the immediate trade window.</p>
+            </div>
+            <div class="strip">
+              <div class="strip-top"><b>Key OI Map</b><span class="teal">Ready</span></div>
+              <p>24,500 CE and 24,400 PE marked as the intraday decision shelf.</p>
+            </div>
+            <div class="strip">
+              <div class="strip-top"><b>Session Bias</b><span class="amber">Monitor</span></div>
+              <p>Trending-to-pinning crossover possible if spot compresses toward max pain in the final two hours.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">
+            <h3>Regime</h3>
+            <span>Live read</span>
+          </div>
+          <div class="regime-grid">
+            <div class="metric">
+              <div class="label">Day Type</div>
+              <div class="value teal">Mild Trending</div>
+              <div class="desc">Trend-following edges have priority over pinning fades.</div>
+            </div>
+            <div class="metric">
+              <div class="label">Volatility</div>
+              <div class="value amber">Contained</div>
+              <div class="desc">Good for clean structure, bad for chasing stretched premiums.</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="center-col">
+        <section class="signal">
+          <div class="signal-head">
+            <div>
+              <h3>Edge 1 + 2: OI Trap and Max Pain / PCR</h3>
+              <p>Decision shelf is still 24,500 CE on top and 24,400 PE below. PCR supports controlled upside.</p>
+            </div>
+            <div class="pill watch">Long Bias Active</div>
+          </div>
+          <div class="signal-body">
+            <div class="metrics-3">
+              <div class="metric">
+                <div class="label">OI Trap</div>
+                <div class="value neg">24,500 CE</div>
+                <div class="desc">Call OI rose with price push, increasing odds of a false breakout squeeze.</div>
+              </div>
+              <div class="metric">
+                <div class="label">PCR</div>
+                <div class="value pos">1.42</div>
+                <div class="desc">Bullish, but not euphoric. Still acceptable for long continuation entries.</div>
+              </div>
+              <div class="metric">
+                <div class="label">Max Pain Gap</div>
+                <div class="value amber">+0.25%</div>
+                <div class="desc">Spot sits above pain, so late-session gravity remains a risk.</div>
+              </div>
+            </div>
+
+            <div class="bars">
+              <div class="bar-row">
+                <span>Call-side trap pressure</span>
+                <div class="bar-bg"><div class="bar-fill" style="width:78%; background:linear-gradient(90deg, var(--teal), var(--green));"></div></div>
+                <span class="mono teal">78%</span>
+              </div>
+              <div class="bar-row">
+                <span>PCR bullish support</span>
+                <div class="bar-bg"><div class="bar-fill" style="width:61%; background:linear-gradient(90deg, var(--teal), var(--green));"></div></div>
+                <span class="mono pos">61%</span>
+              </div>
+              <div class="bar-row">
+                <span>Pinning risk</span>
+                <div class="bar-bg"><div class="bar-fill" style="width:39%; background:linear-gradient(90deg, var(--amber), #f97316);"></div></div>
+                <span class="mono amber">39%</span>
+              </div>
+            </div>
+
+            <div class="track">
+              <div class="marker teal" style="left:37%; color:var(--teal);">
+                <label>Max Pain 24,350</label>
+              </div>
+              <div class="marker amber" style="left:53%; color:var(--amber);">
+                <label>Spot 24,412</label>
+              </div>
+              <div class="marker pos" style="left:66%; color:var(--green);">
+                <label>24,500 CE Wall</label>
+              </div>
+            </div>
+
+            <div class="reason">System read: the long side is still open because upside pressure is coming from trapped call writers and supportive PCR, but the trade loses quality if price starts migrating back toward max pain without trend confirmation.</div>
+          </div>
+        </section>
+
+        <section class="signal">
+          <div class="signal-head">
+            <div>
+              <h3>Edge 3 + 4 + 5: OI Buildup, VWAP / EMA, and FII Filter</h3>
+              <p>Trend structure is bullish intraday, but institutional confirmation is incomplete, which caps position size.</p>
+            </div>
+            <div class="pill caution">Size Reduced</div>
+          </div>
+          <div class="signal-body">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Edge</th>
+                  <th>Current State</th>
+                  <th>Reading</th>
+                  <th>Trade Impact</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>OI Buildup</td>
+                  <td class="mono">24,500 CE short build</td>
+                  <td class="neg">Resistance still live</td>
+                  <td class="mono">Needs breakout respect</td>
+                </tr>
+                <tr>
+                  <td>VWAP / EMA</td>
+                  <td class="mono">Spot above VWAP, 9EMA &gt; 21EMA</td>
+                  <td class="pos">Trend clean</td>
+                  <td class="mono">Primary long trigger</td>
+                </tr>
+                <tr>
+                  <td>FII Filter</td>
+                  <td class="mono">Bullish futures, mixed desk hedge</td>
+                  <td class="amber">Partial confirmation</td>
+                  <td class="mono">0.8x risk cap</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="metrics-3">
+              <div class="metric">
+                <div class="label">VWAP Distance</div>
+                <div class="value pos">+18 pts</div>
+                <div class="desc">Healthy enough for continuation, not so extended that mean reversion is automatic.</div>
+              </div>
+              <div class="metric">
+                <div class="label">EMA Structure</div>
+                <div class="value pos">9 &gt; 21</div>
+                <div class="desc">Trend edge remains intact until crossover failure.</div>
+              </div>
+              <div class="metric">
+                <div class="label">Desk Conflict</div>
+                <div class="value amber">20% Cut</div>
+                <div class="desc">Institutional disagreement is the main reason not to press size.</div>
+              </div>
+            </div>
+
+            <div class="reason">Execution rule: take the long only on hold-above-VWAP behavior, not on random green candles. If VWAP fails, the same mixed institutional tape can quickly turn this into a no-trade environment.</div>
+          </div>
+        </section>
+      </main>
+
+      <aside class="rail">
+        <div class="trade-card">
+          <div class="section-title" style="margin-bottom:0">
+            <h3>Trade Setup</h3>
+            <span>Actionable now</span>
+          </div>
+          <h4>Nifty 24,400 CE scalp continuation</h4>
+          <p>Only valid if spot reclaims and holds above VWAP after a shallow pullback. Entry is not justified on straight extension.</p>
+          <div class="trade-grid">
+            <div class="trade-box">
+              <div class="label">Entry Zone</div>
+              <div class="value">58.50 - 60.20</div>
+              <div class="hint">Take only on confirmed hold, not first touch.</div>
+            </div>
+            <div class="trade-box">
+              <div class="label">Stop</div>
+              <div class="value neg">43.00</div>
+              <div class="hint">Hard exit if VWAP and EMA structure both fail.</div>
+            </div>
+            <div class="trade-box">
+              <div class="label">Target 1</div>
+              <div class="value pos">89.50</div>
+              <div class="hint">Scale partial if premium expands too fast.</div>
+            </div>
+            <div class="trade-box">
+              <div class="label">Target 2</div>
+              <div class="value pos">105.00</div>
+              <div class="hint">Only realistic if 24,500 CE wall weakens.</div>
+            </div>
+            <div class="trade-box full">
+              <div class="label">Invalidation</div>
+              <div class="value neg">Spot loses VWAP and PCR slips below 1.20</div>
+              <div class="hint">That combination removes both trend structure and supportive chain context.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">
+            <h3>Position Sizer</h3>
+            <span>Risk first</span>
+          </div>
+          <div class="risk-grid">
+            <div class="metric">
+              <div class="label">Capital Base</div>
+              <div class="value">₹10,00,000</div>
+              <div class="desc">Configured daily trading capital for this setup.</div>
+            </div>
+            <div class="metric">
+              <div class="label">Risk Per Trade</div>
+              <div class="value amber">1.0%</div>
+              <div class="desc">Reduced to 0.8x effective size due to mixed FII confirmation.</div>
+            </div>
+            <div class="metric">
+              <div class="label">Suggested Size</div>
+              <div class="value teal">8 lots</div>
+              <div class="desc">Full-size model says 10. Dashboard cuts 2 lots from desk conflict.</div>
+            </div>
+            <div class="metric">
+              <div class="label">Max Risk</div>
+              <div class="value neg">₹8,020</div>
+              <div class="desc">Risk stays below planned threshold after size reduction.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">
+            <h3>Execution Rules</h3>
+            <span>Human layer</span>
+          </div>
+          <div class="stack">
+            <div class="strip">
+              <div class="strip-top"><b>1. Do not chase</b><span class="amber">Mandatory</span></div>
+              <p>If premium moves without a clean VWAP hold, skip. This system is about stacked evidence, not impulse.</p>
+            </div>
+            <div class="strip">
+              <div class="strip-top"><b>2. Respect CE wall</b><span class="teal">Watch</span></div>
+              <p>24,500 CE writing is the last major obstacle. Fast rejection there means take profit, not hope.</p>
+            </div>
+            <div class="strip">
+              <div class="strip-top"><b>3. Time stop</b><span class="neg">Hard</span></div>
+              <p>If the setup has not expanded by 2:00 PM IST, cut it. Max pain gravity becomes more important late day.</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="footer">
+      <div class="chip">Regime Mild Trending</div>
+      <div class="chip">Backtest Phase P1 complete, live paper logic next</div>
+      <div class="chip">Primary trigger VWAP hold + EMA confirmation</div>
+      <div class="chip">Current confluence 3 of 5, buy side</div>
+      <div class="chip">Date Wednesday, June 17, 2026</div>
+    </section>
+  </div>
+</body>
+</html>

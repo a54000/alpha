@@ -30,23 +30,33 @@ def build_session_factory():
 def test_index_symbol_map():
     """Test that NIFTY500 maps to correct yfinance ticker."""
     assert INDEX_SYMBOL_MAP["NIFTY500"] == "^CRSLDX"
+    assert INDEX_SYMBOL_MAP["NIFTY50"] == "^NSEI"
 
 
-def test_index_loader_upserts_without_duplicates():
+def test_index_loader_upserts_and_refreshes_without_duplicates():
     factory = build_session_factory()
-    loader = IndexLoader(factory, index_fetcher=lambda index_name, start, end: [
-        IndexPriceBar(index_name=index_name, date=date(2024, 1, 2), open=100, high=110, low=95, close=105, volume=1000),
-        IndexPriceBar(index_name=index_name, date=date(2024, 1, 3), open=105, high=112, low=101, close=108, volume=1200),
-    ])
+    calls = 0
+
+    def fetcher(index_name, start, end):
+        nonlocal calls
+        calls += 1
+        close_offset = calls - 1
+        return [
+            IndexPriceBar(index_name=index_name, date=date(2024, 1, 2), open=100, high=110, low=95, close=105 + close_offset, volume=1000),
+            IndexPriceBar(index_name=index_name, date=date(2024, 1, 3), open=105, high=112, low=101, close=108 + close_offset, volume=1200),
+        ]
+
+    loader = IndexLoader(factory, index_fetcher=fetcher)
 
     first = loader.load(date(2024, 1, 2), date(2024, 1, 3), ["NIFTY500"])
     second = loader.load(date(2024, 1, 2), date(2024, 1, 3), ["NIFTY500"])
     assert first.rows_loaded == 2
-    assert second.rows_loaded == 0
+    assert second.rows_loaded == 2
 
     with factory() as session:
-        rows = session.execute(select(IndexPricesDaily)).all()
+        rows = session.execute(select(IndexPricesDaily).order_by(IndexPricesDaily.date)).scalars().all()
         assert len(rows) == 2
+        assert float(rows[0].close) == 106.0
 
 
 def test_index_loader_backfill():
@@ -59,7 +69,7 @@ def test_index_loader_backfill():
     assert result.rows_loaded == 1
 
     with factory() as session:
-        rows = session.execute(select(IndexPricesDaily)).all()
+        rows = session.execute(select(IndexPricesDaily)).scalars().all()
         assert len(rows) == 1
         assert rows[0].index_name == "NIFTY500"
 
@@ -74,5 +84,5 @@ def test_index_loader_incremental_update():
     assert result.rows_loaded == 1
 
     with factory() as session:
-        rows = session.execute(select(IndexPricesDaily)).all()
+        rows = session.execute(select(IndexPricesDaily)).scalars().all()
         assert len(rows) == 1

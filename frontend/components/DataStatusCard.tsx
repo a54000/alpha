@@ -96,7 +96,7 @@ export function DataStatusCard({
   return (
     <section className={`panel data-status data-status-${status.tone}`}>
       <div className="data-status-head">
-        <h2>Data Status</h2>
+        <h2>Pipeline status</h2>
         <span className={`status-pill ${status.tone}`}>{status.label}</span>
       </div>
       <p className="subtitle">{status.detail}</p>

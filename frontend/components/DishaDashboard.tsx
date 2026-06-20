@@ -610,7 +610,7 @@ export function DishaDashboard({
               <Descriptions column={1} size="small">
                 <Descriptions.Item label="Session">{text(regime.latest?.session_date)}</Descriptions.Item>
                 <Descriptions.Item label="Nifty close">{text(regime.latest?.nifty_close)}</Descriptions.Item>
-                <Descriptions.Item label="ADX">{text(regime.latest?.adx)}</Descriptions.Item>
+                <Descriptions.Item label="Trend strength">{text(regime.latest?.adx)}</Descriptions.Item>
                 <Descriptions.Item label="Total sessions">{text(regime.total_sessions)}</Descriptions.Item>
               </Descriptions>
             </Space>
@@ -753,7 +753,7 @@ export function DishaDashboard({
             type="info"
             showIcon
             message="Sync-only action"
-            description="This updates local Disha app tables from scanner and paper-trading artifacts. It does not place orders, redeem funds, or change strategy rules."
+            description="This updates local Disha app tables from scanner and paper-trading artifacts. It does not place orders, redeem funds, or change the approved setup."
           />
           <Typography.Text>Type {requiredSyncPhrase} to continue.</Typography.Text>
           <Input value={syncPhrase} onChange={(event) => setSyncPhrase(event.target.value)} placeholder={requiredSyncPhrase} autoFocus />
@@ -861,7 +861,7 @@ export function DishaDashboard({
             type="info"
             showIcon
             message="Guided paper launch only"
-            description="This checklist coordinates scanner, workflow notes, session health, exports, and milestone tracking. It does not place trades, redeem funds, or change strategy rules."
+            description="This checklist coordinates scanner, workflow notes, session health, exports, and milestone tracking. It does not place trades, redeem funds, or change the approved setup."
           />
           <Table
             size="small"
@@ -913,7 +913,7 @@ export function DishaDashboard({
             type={scannerRemediation.status === "READY" ? "success" : scannerRemediation.status === "NO_GO" ? "error" : "warning"}
             showIcon
             message={text(scannerRemediation.next_action)}
-            description="Use this panel to resolve scanner readiness only. Guarded sync updates local app tables from artifacts; it does not place orders or change strategy rules."
+            description="Use this panel to resolve scanner readiness only. Guarded sync updates local app tables from artifacts; it does not place orders or change the approved setup."
           />
           <Descriptions column={{ xs: 1, md: 2 }} size="small" bordered>
             <Descriptions.Item label="Signals file">{text(scannerRemediation.artifact?.signals_file)}</Descriptions.Item>

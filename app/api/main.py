@@ -18,6 +18,8 @@ from pydantic import BaseModel, Field
 from app.api.dashboard_service import CockpitConfigurationError, CockpitDatabaseError, CockpitReadService
 from app.api.disha_db_service import DishaDatabaseService, DishaDatabaseServiceError
 from app.api.disha_service import DishaReadService, DishaReadServiceError
+from app.api.market_breadth_service import MarketBreadthError, MarketBreadthService
+from app.api.read_cache import clear_cache, get_or_set
 from app.api.trade_analysis_service import (
     TradeAnalysisError,
     TradeAnalysisRequest,
@@ -30,6 +32,7 @@ from app.api.rolling_portfolio_service import (
     RollingPortfolioSimulationService,
     RollingPortfolioValidationError,
 )
+from app.api.sector_rotation_service import SectorRotationError, SectorRotationService
 from app.api.stock_analysis_service import StockAnalysisError, StockAnalysisService
 
 
@@ -80,6 +83,14 @@ def get_rolling_portfolio_service() -> RollingPortfolioSimulationService:
 
 def get_stock_analysis_service() -> StockAnalysisService:
     return StockAnalysisService()
+
+
+def get_sector_rotation_service() -> SectorRotationService:
+    return SectorRotationService()
+
+
+def get_market_breadth_service() -> MarketBreadthService:
+    return MarketBreadthService()
 
 
 def get_disha_service() -> DishaReadService:
@@ -142,6 +153,16 @@ class DishaPaperWorkflowPayload(BaseModel):
     symbol: str | None = Field(default=None, max_length=40)
 
 
+class Nifty500ExpansionBackfillPayload(BaseModel):
+    to_date: date = Field(default_factory=date.today)
+    from_date: date = Field(default_factory=lambda: date(2021, 6, 14))
+    execute: bool = False
+    confirmation_phrase: str = ""
+    batch_size: int = Field(default=25, ge=1, le=200)
+    start_batch: int = Field(default=1, ge=1)
+    end_batch: int | None = Field(default=None, ge=1)
+
+
 @app.on_event("startup")
 def validate_cockpit_configuration() -> None:
     try:
@@ -181,6 +202,22 @@ def disha_database_service_error_handler(_, exc: DishaDatabaseServiceError) -> J
     return JSONResponse(
         status_code=503,
         content={"detail": str(exc), "error_type": "disha_database_error"},
+    )
+
+
+@app.exception_handler(SectorRotationError)
+def sector_rotation_error_handler(_, exc: SectorRotationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content={"detail": str(exc), "error_type": "sector_rotation_error"},
+    )
+
+
+@app.exception_handler(MarketBreadthError)
+def market_breadth_error_handler(_, exc: MarketBreadthError) -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content={"detail": str(exc), "error_type": "market_breadth_error"},
     )
 
 
@@ -510,17 +547,25 @@ def disha_db_paper_events(
 
 
 @app.get("/dashboard")
-def dashboard(service: CockpitReadService = Depends(get_service)) -> dict[str, object]:
-    return service.dashboard()
+def dashboard(
+    refresh: bool = Query(default=False),
+    service: CockpitReadService = Depends(get_service),
+) -> dict[str, object]:
+    return get_or_set(("dashboard",), service.dashboard, refresh=refresh)
 
 
 @app.get("/recommendations/latest")
 def recommendations_latest(
     model: str = Query(default="swing_v2_1"),
     limit: int = Query(default=20, ge=1, le=100),
+    refresh: bool = Query(default=False),
     service: CockpitReadService = Depends(get_service),
 ) -> dict[str, object]:
-    return service.latest_recommendations(model=model, limit=limit)
+    return get_or_set(
+        ("recommendations_latest", model, limit),
+        lambda: service.latest_recommendations(model=model, limit=limit),
+        refresh=refresh,
+    )
 
 
 @app.get("/recommendations/{symbol}/explanation")
@@ -528,43 +573,67 @@ def recommendation_explanation(
     symbol: str,
     recommendation_type: str = Query(default="swing_v2_1"),
     business_date: date | None = Query(default=None),
+    refresh: bool = Query(default=False),
     service: CockpitReadService = Depends(get_service),
 ) -> dict[str, object]:
-    return service.recommendation_explanation(
-        symbol=symbol,
-        recommendation_type=recommendation_type,
-        business_date=business_date,
+    normalized_symbol = symbol.upper()
+    return get_or_set(
+        ("recommendation_explanation", normalized_symbol, recommendation_type, business_date),
+        lambda: service.recommendation_explanation(
+            symbol=normalized_symbol,
+            recommendation_type=recommendation_type,
+            business_date=business_date,
+        ),
+        refresh=refresh,
     )
 
 
 @app.get("/portfolio")
 def portfolio(
     portfolio_id: int | None = Query(default=None),
+    refresh: bool = Query(default=False),
     service: CockpitReadService = Depends(get_service),
 ) -> dict[str, object]:
-    return service.portfolio(portfolio_id=portfolio_id)
+    return get_or_set(
+        ("portfolio", portfolio_id),
+        lambda: service.portfolio(portfolio_id=portfolio_id),
+        refresh=refresh,
+    )
 
 
 @app.get("/portfolio/attribution")
 def portfolio_attribution(
     portfolio_id: int | None = Query(default=None),
+    refresh: bool = Query(default=False),
     service: CockpitReadService = Depends(get_service),
 ) -> dict[str, object]:
-    return service.portfolio_attribution(portfolio_id=portfolio_id)
+    return get_or_set(
+        ("portfolio_attribution", portfolio_id),
+        lambda: service.portfolio_attribution(portfolio_id=portfolio_id),
+        refresh=refresh,
+    )
 
 
 @app.get("/trades")
 def trades(
     portfolio_id: int | None = Query(default=None),
     limit: int = Query(default=100, ge=1, le=500),
+    refresh: bool = Query(default=False),
     service: CockpitReadService = Depends(get_service),
 ) -> dict[str, object]:
-    return service.trades(portfolio_id=portfolio_id, limit=limit)
+    return get_or_set(
+        ("trades", portfolio_id, limit),
+        lambda: service.trades(portfolio_id=portfolio_id, limit=limit),
+        refresh=refresh,
+    )
 
 
 @app.get("/pipeline/status")
-def pipeline_status(service: CockpitReadService = Depends(get_service)) -> dict[str, object]:
-    return service.pipeline_status()
+def pipeline_status(
+    refresh: bool = Query(default=False),
+    service: CockpitReadService = Depends(get_service),
+) -> dict[str, object]:
+    return get_or_set(("pipeline_status",), service.pipeline_status, refresh=refresh)
 
 
 @app.post("/pipeline/run")
@@ -573,6 +642,7 @@ def run_pipeline(payload: PipelineRunPayload) -> dict[str, object]:
     reports_dir = REPO_ROOT / "reports"
     logs_dir.mkdir(parents=True, exist_ok=True)
     reports_dir.mkdir(parents=True, exist_ok=True)
+    cleared_cache_entries = clear_cache()
 
     business_date = payload.business_date.isoformat()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -647,22 +717,197 @@ def run_pipeline(payload: PipelineRunPayload) -> dict[str, object]:
             "strategy_changes": False,
             "production_tables_modified": False,
         },
+        "cache": {
+            "cleared_read_entries": cleared_cache_entries,
+            "reason": "pipeline run requested",
+        },
+    }
+
+
+@app.post("/pipeline/universe/audit")
+def run_universe_audit() -> dict[str, object]:
+    logs_dir = REPO_ROOT / "logs" / "daily_pipeline"
+    reports_dir = REPO_ROOT / "reports"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_path = logs_dir / f"nifty500_universe_audit_{timestamp}.log"
+    command = [sys.executable, "scripts/audit_nifty500_universe_expansion.py"]
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    with log_path.open("w", encoding="utf-8") as log_handle:
+        log_handle.write(f"[{datetime.now().isoformat()}] Starting universe audit\n")
+        log_handle.write(f"ProjectRoot={REPO_ROOT}\n")
+        log_handle.write(f"Command={' '.join(command)}\n\n")
+        log_handle.flush()
+        try:
+            completed = subprocess.run(command, cwd=REPO_ROOT, stdout=log_handle, stderr=subprocess.STDOUT, env=env, check=False)
+        except OSError as exc:
+            raise HTTPException(status_code=503, detail=f"Unable to start universe audit: {exc}") from exc
+    return {
+        "status": "completed" if completed.returncode == 0 else "failed",
+        "returncode": completed.returncode,
+        "log_path": str(log_path),
+        "command": command,
+        "reports": [
+            str(REPO_ROOT / "reports" / "nifty500_backfill_status.csv"),
+            str(REPO_ROOT / "reports" / "nifty500_universe_expansion_audit.json"),
+            str(REPO_ROOT / "docs" / "PHASE7A_NIFTY500_UNIVERSE_EXPANSION.md"),
+        ],
+    }
+
+
+@app.post("/pipeline/universe/prepare-backfill")
+def prepare_universe_backfill() -> dict[str, object]:
+    logs_dir = REPO_ROOT / "logs" / "daily_pipeline"
+    reports_dir = REPO_ROOT / "reports"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_path = logs_dir / f"nifty500_backfill_prep_{timestamp}.log"
+    command = [sys.executable, "scripts/prepare_nifty500_expansion_batches.py"]
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    with log_path.open("w", encoding="utf-8") as log_handle:
+        log_handle.write(f"[{datetime.now().isoformat()}] Preparing backfill batches\n")
+        log_handle.write(f"ProjectRoot={REPO_ROOT}\n")
+        log_handle.write(f"Command={' '.join(command)}\n\n")
+        log_handle.flush()
+        try:
+            completed = subprocess.run(command, cwd=REPO_ROOT, stdout=log_handle, stderr=subprocess.STDOUT, env=env, check=False)
+        except OSError as exc:
+            raise HTTPException(status_code=503, detail=f"Unable to prepare backfill batches: {exc}") from exc
+    return {
+        "status": "completed" if completed.returncode == 0 else "failed",
+        "returncode": completed.returncode,
+        "log_path": str(log_path),
+        "command": command,
+        "reports": [
+            str(REPO_ROOT / "reports" / "nifty500_expansion_universe_symbols.csv"),
+            str(REPO_ROOT / "reports" / "nifty500_needs_angel_backfill_symbols.csv"),
+            str(REPO_ROOT / "reports" / "nifty500_backfill_batches"),
+            str(REPO_ROOT / "reports" / "nifty500_expansion_batch_plan.json"),
+        ],
+    }
+
+
+@app.post("/pipeline/universe/run-backfill")
+def run_universe_backfill(payload: Nifty500ExpansionBackfillPayload) -> dict[str, object]:
+    if payload.execute and payload.confirmation_phrase != "RUN NIFTY500 BACKFILL":
+        raise HTTPException(status_code=403, detail="Invalid confirmation phrase for live backfill execution")
+    logs_dir = REPO_ROOT / "logs" / "daily_pipeline"
+    reports_dir = REPO_ROOT / "reports"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_path = logs_dir / f"nifty500_backfill_{timestamp}.log"
+    command = [
+        sys.executable,
+        "scripts/run_nifty500_backfill_batches.py",
+        "--from-date",
+        payload.from_date.isoformat(),
+        "--to-date",
+        payload.to_date.isoformat(),
+        "--start-batch",
+        str(payload.start_batch),
+        "--summary-json",
+        "reports/nifty500_backfill_batches_summary.json",
+    ]
+    if payload.end_batch is not None:
+        command.extend(["--end-batch", str(payload.end_batch)])
+    if payload.execute:
+        command.append("--execute")
+    command.extend(["--batch-dir", "reports/nifty500_backfill_batches"])
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    with log_path.open("w", encoding="utf-8") as log_handle:
+        log_handle.write(f"[{datetime.now().isoformat()}] Starting backfill batches\n")
+        log_handle.write(f"ProjectRoot={REPO_ROOT}\n")
+        log_handle.write(f"Command={' '.join(command)}\n\n")
+        log_handle.flush()
+        try:
+            completed = subprocess.run(command, cwd=REPO_ROOT, stdout=log_handle, stderr=subprocess.STDOUT, env=env, check=False)
+        except OSError as exc:
+            raise HTTPException(status_code=503, detail=f"Unable to start backfill batches: {exc}") from exc
+    return {
+        "status": "completed" if completed.returncode == 0 else "failed",
+        "returncode": completed.returncode,
+        "log_path": str(log_path),
+        "command": command,
+        "safety": {
+            "execute": payload.execute,
+            "confirmation_required": True,
+            "live_angel_calls": payload.execute,
+        },
+        "reports": [
+            str(REPO_ROOT / "reports" / "nifty500_backfill_batches_summary.json"),
+            str(REPO_ROOT / "reports" / "nifty500_backfill_status.csv"),
+        ],
     }
 
 
 @app.get("/research/metrics")
-def research_metrics(service: CockpitReadService = Depends(get_service)) -> dict[str, object]:
-    return service.research_metrics()
+def research_metrics(
+    refresh: bool = Query(default=False),
+    service: CockpitReadService = Depends(get_service),
+) -> dict[str, object]:
+    return get_or_set(("research_metrics",), service.research_metrics, refresh=refresh)
+
+
+@app.get("/research/sector-rotation/insights")
+def sector_rotation_insights(
+    as_of: date | None = Query(default=None),
+    refresh: bool = Query(default=False),
+    service: SectorRotationService = Depends(get_sector_rotation_service),
+) -> dict[str, object]:
+    return get_or_set(
+        ("sector_rotation_insights", as_of),
+        lambda: service.insights(as_of=as_of),
+        refresh=refresh,
+    )
+
+
+@app.get("/research/sector-rotation/industry-confirmation")
+def sector_rotation_industry_confirmation(
+    sector: str | None = Query(default=None),
+    as_of: date | None = Query(default=None),
+    refresh: bool = Query(default=False),
+    service: SectorRotationService = Depends(get_sector_rotation_service),
+) -> dict[str, object]:
+    return get_or_set(
+        ("sector_rotation_industry_confirmation", sector, as_of),
+        lambda: service.industry_confirmation(sector=sector, as_of=as_of),
+        refresh=refresh,
+    )
+
+
+@app.get("/market-breadth")
+def market_breadth(
+    as_of: date | None = Query(default=None),
+    refresh: bool = Query(default=False),
+    service: MarketBreadthService = Depends(get_market_breadth_service),
+) -> dict[str, object]:
+    return get_or_set(
+        ("market_breadth", as_of),
+        lambda: service.breadth(as_of=as_of),
+        refresh=refresh,
+    )
 
 
 @app.get("/stock-analysis/search")
 def stock_analysis_search(
     q: str = Query(default="", min_length=0, max_length=40),
     limit: int = Query(default=20, ge=1, le=50),
+    refresh: bool = Query(default=False),
     service: StockAnalysisService = Depends(get_stock_analysis_service),
 ) -> dict[str, object]:
     try:
-        return service.search_symbols(q, limit=limit)
+        normalized_query = q.strip().upper()
+        return get_or_set(
+            ("stock_analysis_search", normalized_query, limit),
+            lambda: service.search_symbols(normalized_query, limit=limit),
+            refresh=refresh,
+        )
     except StockAnalysisError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -670,10 +915,16 @@ def stock_analysis_search(
 @app.get("/stock-analysis/{symbol}")
 def stock_analysis_dashboard(
     symbol: str,
+    refresh: bool = Query(default=False),
     service: StockAnalysisService = Depends(get_stock_analysis_service),
 ) -> dict[str, object]:
     try:
-        return service.dashboard(symbol)
+        normalized_symbol = symbol.upper()
+        return get_or_set(
+            ("stock_analysis_dashboard", normalized_symbol),
+            lambda: service.dashboard(normalized_symbol),
+            refresh=refresh,
+        )
     except StockAnalysisError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -681,10 +932,15 @@ def stock_analysis_dashboard(
 @app.get("/research/rolling-portfolio/defaults")
 def rolling_portfolio_defaults(
     recommendation_model: Literal["swing_v2_1", "sector_rotation_adx_1m3m"] = Query(default="swing_v2_1"),
+    refresh: bool = Query(default=False),
     service: RollingPortfolioSimulationService = Depends(get_rolling_portfolio_service),
 ) -> dict[str, object]:
     try:
-        return service.defaults(recommendation_model=recommendation_model)
+        return get_or_set(
+            ("rolling_portfolio_defaults", recommendation_model),
+            lambda: service.defaults(recommendation_model=recommendation_model),
+            refresh=refresh,
+        )
     except RollingPortfolioError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -731,13 +987,29 @@ def run_trade_analysis(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
-@app.get("/research/trade-analysis/{report_id}")
-def get_trade_analysis(
-    report_id: str,
+@app.get("/research/trade-analysis/model-status")
+def trade_analysis_model_status(
+    model: Literal["swing_v2_1", "sector_rotation_adx_1m3m"] = Query(default="sector_rotation_adx_1m3m"),
     service: TradeAnalysisService = Depends(get_trade_analysis_service),
 ) -> dict[str, object]:
     try:
-        return service.get(report_id)
+        return service.recommendation_model_status(model)
+    except TradeAnalysisError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.get("/research/trade-analysis/{report_id}")
+def get_trade_analysis(
+    report_id: str,
+    refresh: bool = Query(default=False),
+    service: TradeAnalysisService = Depends(get_trade_analysis_service),
+) -> dict[str, object]:
+    try:
+        return get_or_set(
+            ("trade_analysis_report", report_id),
+            lambda: service.get(report_id),
+            refresh=refresh,
+        )
     except TradeAnalysisError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

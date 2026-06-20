@@ -45,6 +45,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--angel-database-name", default="angel_data")
     parser.add_argument("--pilot-schema", default="pilot_phase2a")
     parser.add_argument("--start-date", default=DEFAULT_START_DATE.isoformat())
+    parser.add_argument("--universe-csv", help="Optional universe CSV used to filter symbols before scoring.")
     parser.add_argument("--output-json", default="reports/phase2c_scoring_validation.json")
     parser.add_argument("--coverage-csv", default="reports/phase2c_scoring_coverage_by_date.csv")
     parser.add_argument("--monthly-csv", default="reports/phase2c_scoring_coverage_by_month.csv")
@@ -98,6 +99,20 @@ def load_features(angel_url: str, schema: str, start_date: date) -> pd.DataFrame
     ]:
         frame[column] = pd.to_numeric(frame[column], errors="coerce")
     return frame
+
+
+def load_universe_symbols(universe_csv: str | None) -> set[str]:
+    if not universe_csv:
+        return set()
+    path = REPO_ROOT / universe_csv
+    if not path.exists():
+        return set()
+    frame = pd.read_csv(path)
+    if "symbol" not in frame.columns:
+        return set()
+    if "status" in frame.columns:
+        frame = frame[frame["status"].astype(str).str.lower() == "ready"]
+    return {str(symbol).strip().upper() for symbol in frame["symbol"].dropna().tolist() if str(symbol).strip()}
 
 
 def production_eligible(row: pd.Series) -> bool:
@@ -332,6 +347,9 @@ def main() -> int:
         raise RuntimeError("Angel database URL is required.")
 
     features = load_features(angel_url, args.pilot_schema, start_date)
+    universe_symbols = load_universe_symbols(args.universe_csv)
+    if universe_symbols:
+        features = features[features["symbol"].astype(str).str.upper().isin(universe_symbols)].copy()
     scores = compute_scores(features)
     write_scores(angel_url, args.pilot_schema, scores, start_date)
     report = summarize(features, scores, start_date)

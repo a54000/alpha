@@ -1,0 +1,112 @@
+<div style="padding: 1rem 0;">
+
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+  <div>
+    <h1 style="margin: 0 0 4px;">Sector rotation cockpit</h1>
+    <p style="margin: 0; font-size: 13px; color: var(--color-text-secondary);">NAV, PnL, benchmark, and pipeline status for ADX rolling-10 sector rotation</p>
+  </div>
+  <span style="font-size: 12px; color: var(--color-text-secondary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 4px 10px; white-space: nowrap;">Paper trading since 2026-01-02</span>
+</div>
+
+<div style="background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1.25rem; margin-bottom: 1rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+    <h2 style="margin: 0;">Pipeline status</h2>
+    <span style="background: var(--color-background-success); color: var(--color-text-success); font-size: 12px; padding: 4px 10px; border-radius: var(--border-radius-md);">All current</span>
+  </div>
+  <p style="font-size: 13px; color: var(--color-text-secondary); margin: 0 0 12px;">Today's price fetch has run. Market data, recommendations, and pipeline are aligned.</p>
+  <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+    <tr style="border-top: 0.5px solid var(--color-border-tertiary);">
+      <td style="padding: 8px 0; color: var(--color-text-secondary);"><i class="ti ti-chart-candle" style="font-size:16px; vertical-align:-2px; margin-right:8px;" aria-hidden="true"></i>Latest market data</td>
+      <td style="padding: 8px 0; text-align: right;">2026-06-17</td>
+    </tr>
+    <tr style="border-top: 0.5px solid var(--color-border-tertiary);">
+      <td style="padding: 8px 0; color: var(--color-text-secondary);"><i class="ti ti-bulb" style="font-size:16px; vertical-align:-2px; margin-right:8px;" aria-hidden="true"></i>Latest recommendations</td>
+      <td style="padding: 8px 0; text-align: right;">2026-06-17 <span style="background: var(--color-background-info); color: var(--color-text-info); font-size: 11px; padding: 2px 7px; border-radius: var(--border-radius-md); margin-left: 6px;">2 new</span></td>
+    </tr>
+    <tr style="border-top: 0.5px solid var(--color-border-tertiary);">
+      <td style="padding: 8px 0; color: var(--color-text-secondary);"><i class="ti ti-refresh" style="font-size:16px; vertical-align:-2px; margin-right:8px;" aria-hidden="true"></i>Latest pipeline run</td>
+      <td style="padding: 8px 0; text-align: right;">2026-06-17, 15:32</td>
+    </tr>
+  </table>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 1rem;">
+  <div style="background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 1rem;">
+    <p style="font-size: 13px; color: var(--color-text-secondary); margin: 0 0 4px;">NAV</p>
+    <p style="font-size: 24px; font-weight: 500; margin: 0;">9,97,752</p>
+  </div>
+  <div style="background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 1rem;">
+    <p style="font-size: 13px; color: var(--color-text-secondary); margin: 0 0 4px;">Realized PnL</p>
+    <p style="font-size: 24px; font-weight: 500; margin: 0;">0</p>
+  </div>
+  <div style="background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 1rem;">
+    <p style="font-size: 13px; color: var(--color-text-secondary); margin: 0 0 4px;">Unrealized PnL</p>
+    <p style="font-size: 24px; font-weight: 500; color: var(--color-text-danger); margin: 0;">-2,247.92</p>
+  </div>
+  <div style="background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 1rem;">
+    <p style="font-size: 13px; color: var(--color-text-secondary); margin: 0 0 4px;">Drawdown from peak</p>
+    <p style="font-size: 24px; font-weight: 500; margin: 0;">-0.22%</p>
+  </div>
+</div>
+
+<div style="background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1.25rem; margin-bottom: 1rem;">
+  <h2 style="margin: 0 0 12px;">Strategy vs benchmark</h2>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 1rem;">
+    <div style="background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 1rem;">
+      <p style="font-size: 13px; color: var(--color-text-secondary); margin: 0 0 4px;">Strategy return</p>
+      <p style="font-size: 22px; font-weight: 500; margin: 0;">+1.87%</p>
+    </div>
+    <div style="background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 1rem;">
+      <p style="font-size: 13px; color: var(--color-text-secondary); margin: 0 0 4px;">NIFTY 50 return</p>
+      <p style="font-size: 22px; font-weight: 500; margin: 0;">+1.42%</p>
+    </div>
+    <div style="background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 1rem;">
+      <p style="font-size: 13px; color: var(--color-text-secondary); margin: 0 0 4px;">Alpha</p>
+      <p style="font-size: 22px; font-weight: 500; color: var(--color-text-success); margin: 0;">+0.45%</p>
+    </div>
+  </div>
+  <p style="font-size: 12px; color: var(--color-text-secondary); margin: 0;">Since inception (2026-01-02), NIFTY 50 total return. <a href="#" onclick="sendPrompt('Show me the benchmark comparison in Trade Analysis with sector-basket and rolling windows'); return false;">View sector-basket comparison in Trade Analysis ↗</a></p>
+</div>
+
+<div style="background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1.25rem; margin-bottom: 1rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+    <h2 style="margin: 0;">Paper trading status</h2>
+    <span style="background: var(--color-background-warning); color: var(--color-text-warning); font-size: 12px; padding: 4px 10px; border-radius: var(--border-radius-md);">1 skip flagged</span>
+  </div>
+  <div style="display: flex; align-items: flex-start; gap: 10px; margin-top: 12px; padding: 10px 12px; background: var(--color-background-secondary); border-radius: var(--border-radius-md);">
+    <i class="ti ti-alert-triangle" style="font-size: 16px; color: var(--color-text-warning); margin-top: 2px;" aria-hidden="true"></i>
+    <div>
+      <p style="font-size: 14px; margin: 0 0 2px;">CARBORUNIV skipped &mdash; no next trading day</p>
+      <p style="font-size: 12px; color: var(--color-text-secondary); margin: 0;">Likely delisted or suspended. Recommendation engine will not re-enter this symbol until resolved.</p>
+    </div>
+    <button style="margin-left: auto; white-space: nowrap; font-size: 12px; padding: 6px 10px;" onclick="sendPrompt('Why was CARBORUNIV skipped, and what should I do about it?')">Investigate ↗</button>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+
+  <div style="background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1.25rem;">
+    <h2 style="margin: 0 0 12px;">System health</h2>
+    <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+      <tr><td style="padding: 6px 0; color: var(--color-text-secondary);">Pipeline status</td><td style="padding: 6px 0; text-align: right;"><span style="color: var(--color-text-success);">●</span>&nbsp; success</td></tr>
+      <tr style="border-top: 0.5px solid var(--color-border-tertiary);"><td style="padding: 6px 0; color: var(--color-text-secondary);">Latest candle</td><td style="padding: 6px 0; text-align: right;">15:15 IST</td></tr>
+      <tr style="border-top: 0.5px solid var(--color-border-tertiary);"><td style="padding: 6px 0; color: var(--color-text-secondary);">Latest features</td><td style="padding: 6px 0; text-align: right;">2026-06-17</td></tr>
+      <tr style="border-top: 0.5px solid var(--color-border-tertiary);"><td style="padding: 6px 0; color: var(--color-text-secondary);">Latest recommendations</td><td style="padding: 6px 0; text-align: right;">2026-06-17</td></tr>
+    </table>
+    <button style="width: 100%; margin-top: 12px; font-size: 13px;" onclick="sendPrompt('Take me to Operations to trigger today\'s price fetch job')"><i class="ti ti-player-play" style="font-size: 14px; vertical-align: -2px; margin-right: 4px;" aria-hidden="true"></i>Run today's job in Operations ↗</button>
+  </div>
+
+  <div style="background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1.25rem;">
+    <h2 style="margin: 0 0 12px;">Exposure</h2>
+    <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+      <tr><td style="padding: 6px 0; color: var(--color-text-secondary);">Invested</td><td style="padding: 6px 0; text-align: right;">2,87,766</td></tr>
+      <tr style="border-top: 0.5px solid var(--color-border-tertiary);"><td style="padding: 6px 0; color: var(--color-text-secondary);">Cash</td><td style="padding: 6px 0; text-align: right;">7,09,986</td></tr>
+      <tr style="border-top: 0.5px solid var(--color-border-tertiary);"><td style="padding: 6px 0; color: var(--color-text-secondary);">Current exposure</td><td style="padding: 6px 0; text-align: right;">28.84%</td></tr>
+      <tr style="border-top: 0.5px solid var(--color-border-tertiary);"><td style="padding: 6px 0; color: var(--color-text-secondary);">Max sector weight policy</td><td style="padding: 6px 0; text-align: right;">35.03%</td></tr>
+    </table>
+    <button style="width: 100%; margin-top: 12px; font-size: 13px;" onclick="sendPrompt('Show me the full position list in Portfolio')"><i class="ti ti-briefcase" style="font-size: 14px; vertical-align: -2px; margin-right: 4px;" aria-hidden="true"></i>View positions in Portfolio ↗</button>
+  </div>
+
+</div>
+
+</div>

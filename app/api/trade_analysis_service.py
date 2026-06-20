@@ -25,6 +25,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 MODEL = "swing_v2_1"
 SUPPORTED_RECOMMENDATION_MODELS = {"swing_v2_1", "sector_rotation_adx_1m3m"}
 DEFAULT_HOLDING_PERIOD = 20
+TRADE_ANALYSIS_ARTIFACT_VERSION = 2
 KNOWN_SPECIAL_SESSIONS = {
     date(2022, 10, 24),
     date(2023, 11, 12),
@@ -73,7 +74,7 @@ class AnalysisPosition:
     entry_date: date
     entry_price: float
     quantity: float
-    planned_exit_date: date
+    planned_exit_date: date | None
     rank: int
     score: float | None
     entry_value: float
@@ -103,6 +104,7 @@ STRATEGIES = {
 
 ARTIFACTS = {
     "trades.csv",
+    "open_positions.csv",
     "summary.md",
     "summary.json",
     "metadata.json",
@@ -233,10 +235,34 @@ def positions_value(
 ) -> float:
     total = 0.0
     for position in positions:
-        price = prices.get(position.symbol, {}).get(current_date, {}).get(field)
+        price = mark_price(prices, position.symbol, current_date, field)
         if price is not None:
             total += position.quantity * price
     return total
+
+
+def mark_price(
+    prices: dict[str, dict[date, dict[str, float]]],
+    symbol: str,
+    current_date: date,
+    field: str,
+) -> float | None:
+    symbol_prices = prices.get(symbol, {})
+    row = symbol_prices.get(current_date, {})
+    price = row.get(field)
+    if price is not None:
+        return price
+
+    # For mark-to-market only, carry forward the latest available close if a
+    # symbol has a missing bar on an otherwise valid portfolio valuation date.
+    for item_date in sorted((item for item in symbol_prices if item <= current_date), reverse=True):
+        item = symbol_prices[item_date]
+        fallback = item.get("close")
+        if fallback is None and field != "close":
+            fallback = item.get(field)
+        if fallback is not None:
+            return fallback
+    return None
 
 
 def passes_sector_cap(sector: str | None, positions: list[AnalysisPosition], config: StrategyConfig) -> bool:
@@ -331,6 +357,38 @@ def build_trade_row(
     }
 
 
+def build_open_position_row(
+    position_id: int,
+    position: AnalysisPosition,
+    mark_date: date,
+    mark_price: float,
+    dates: list[date],
+    strategy: str,
+) -> dict[str, object]:
+    mark_value = position.quantity * mark_price
+    unrealized_pnl = mark_value - position.entry_value
+    return {
+        "position_id": position_id,
+        "symbol": position.symbol,
+        "sector": position.sector,
+        "strategy": strategy,
+        "status": "open",
+        "signal_date": position.signal_date.isoformat(),
+        "entry_date": position.entry_date.isoformat(),
+        "entry_price": position.entry_price,
+        "planned_exit_date": position.planned_exit_date.isoformat() if position.planned_exit_date else "",
+        "mark_date": mark_date.isoformat(),
+        "mark_price": mark_price,
+        "days_held": trading_day_distance(dates, position.entry_date, mark_date),
+        "planned_holding_days": DEFAULT_HOLDING_PERIOD,
+        "quantity": position.quantity,
+        "entry_value": position.entry_value,
+        "mark_value": mark_value,
+        "unrealized_pnl": unrealized_pnl,
+        "unrealized_return_pct": unrealized_pnl / position.entry_value if position.entry_value else 0.0,
+    }
+
+
 def reconstruct_trades(
     request: TradeAnalysisRequest,
     recommendations: list[dict[str, object]],
@@ -351,6 +409,7 @@ def reconstruct_trades(
                 "total_charges": 0.0,
             },
             "trades": [],
+            "open_positions": [],
             "equity_curve": [],
             "incomplete_positions_forced_closed": 0,
         }
@@ -370,6 +429,7 @@ def reconstruct_trades(
     cash = float(request.initial_capital)
     positions: list[AnalysisPosition] = []
     trades: list[dict[str, object]] = []
+    open_positions: list[dict[str, object]] = []
     equity_curve: list[dict[str, object]] = []
     trade_id = 1
 
@@ -378,7 +438,7 @@ def reconstruct_trades(
         closed_today: set[str] = set()
         for position in positions:
             close_price = prices.get(position.symbol, {}).get(current_date, {}).get("close")
-            if current_date >= position.planned_exit_date and close_price is not None:
+            if position.planned_exit_date is not None and current_date >= position.planned_exit_date and close_price is not None:
                 row = build_trade_row(trade_id, position, current_date, close_price, symbol_dates(prices, position.symbol), request.strategy)
                 cash += float(row["exit_value"]) - (float(row["charges"]) - total_charges(position.buy_charges))
                 trades.append(row)
@@ -425,8 +485,6 @@ def reconstruct_trades(
                     allocation = cash / (1.0 + (total_charges(buy_charges) / allocation if allocation else 0.0))
                     buy_charges = buy_side_charges(allocation)
                 planned_exit = nth_trading_day_after(symbol_dates(prices, symbol), current_date, config.holding_period)
-                if planned_exit is None:
-                    planned_exit = dates[-1]
                 quantity = allocation / open_price
                 cash -= allocation + total_charges(buy_charges)
                 positions.append(
@@ -456,27 +514,19 @@ def reconstruct_trades(
             }
         )
 
-    forced = 0
     if dates:
         final_date = dates[-1]
-        for position in positions:
+        for position_id, position in enumerate(positions, start=1):
             close_price = prices.get(position.symbol, {}).get(final_date, {}).get("close")
             if close_price is None:
                 continue
-            row = build_trade_row(trade_id, position, final_date, close_price, symbol_dates(prices, position.symbol), request.strategy)
-            trades.append(row)
-            cash += float(row["exit_value"]) - (float(row["charges"]) - total_charges(position.buy_charges))
-            trade_id += 1
-            forced += 1
-        equity_curve[-1]["equity"] = cash
-        equity_curve[-1]["cash"] = cash
-        equity_curve[-1]["position_count"] = 0
+            row = build_open_position_row(position_id, position, final_date, close_price, symbol_dates(prices, position.symbol), request.strategy)
+            open_positions.append(row)
 
     trade_summary = summarize_trades(trades)
-    net_pnl = float(trade_summary["net_pnl"])
-    ending_value = request.initial_capital + net_pnl
     equity_summary = summarize_equity(equity_curve, request.initial_capital)
-    total_return = net_pnl / request.initial_capital if request.initial_capital else 0.0
+    ending_value = float(equity_summary["ending_value"])
+    total_return = float(equity_summary["total_return"])
     days = max(1, len(equity_curve))
     cagr = (ending_value / request.initial_capital) ** (252 / days) - 1 if request.initial_capital and ending_value > 0 else -1.0
     summary = {
@@ -492,9 +542,11 @@ def reconstruct_trades(
         "cagr": cagr,
         "max_drawdown": equity_summary["max_drawdown"],
         **trade_summary,
-        "incomplete_positions_forced_closed": forced,
+        "open_positions": len(open_positions),
+        "open_unrealized_pnl": sum(float(row["unrealized_pnl"]) for row in open_positions),
+        "incomplete_positions_forced_closed": 0,
     }
-    return {"summary": summary, "trades": trades, "equity_curve": equity_curve, "incomplete_positions_forced_closed": forced}
+    return {"summary": summary, "trades": trades, "open_positions": open_positions, "equity_curve": equity_curve, "incomplete_positions_forced_closed": 0}
 
 
 class TradeAnalysisService:
@@ -548,6 +600,12 @@ class TradeAnalysisService:
                 "prices": f"{self.pilot_schema}.daily_bars_clean",
                 "recommendation_rows": len(recommendations),
                 "symbols": len(symbols),
+                "recommendation_source_model": recommendations[0]["model"] if recommendations else request.recommendation_model,
+                "recommendation_universe_source": (
+                    "reports/nifty500_expansion_universe_symbols.csv"
+                    if request.recommendation_model == "sector_rotation_adx_1m3m"
+                    else "legacy swing v2.1 universe"
+                ),
             },
             "constraints": {
                 "scoring_changed": False,
@@ -567,6 +625,34 @@ class TradeAnalysisService:
         if not path.exists():
             raise TradeAnalysisError(f"Trade analysis report not found: {report_id}")
         return json.loads(path.read_text(encoding="utf-8"))
+
+    def recommendation_model_status(self, model: str) -> dict[str, object]:
+        if self.angel_engine is None:
+            raise TradeAnalysisError("ANGEL_DATABASE_URL is required for trade analysis.")
+        query = text(
+            f"""
+            SELECT
+                COUNT(*) AS recommendation_rows,
+                COUNT(DISTINCT date) AS recommendation_dates,
+                MIN(date) AS first_recommendation_date,
+                MAX(date) AS last_recommendation_date
+            FROM {self.pilot_schema}.recommendations_daily
+            WHERE model = :model
+            """
+        )
+        with self.angel_engine.connect() as connection:
+            row = connection.execute(query, {"model": model}).mappings().one()
+        first_date = row.get("first_recommendation_date")
+        last_date = row.get("last_recommendation_date")
+        return {
+            "model": model,
+            "source": f"{self.pilot_schema}.recommendations_daily",
+            "recommendation_rows": int(row.get("recommendation_rows") or 0),
+            "recommendation_dates": int(row.get("recommendation_dates") or 0),
+            "first_recommendation_date": first_date.isoformat() if hasattr(first_date, "isoformat") else first_date,
+            "last_recommendation_date": last_date.isoformat() if hasattr(last_date, "isoformat") else last_date,
+            "is_empty": int(row.get("recommendation_rows") or 0) == 0,
+        }
 
     def artifact_path(self, report_id: str, artifact_name: str) -> Path:
         if artifact_name not in ARTIFACTS:
@@ -594,6 +680,7 @@ class TradeAnalysisService:
             "recommendation_model": request.recommendation_model,
             "initial_capital": request.initial_capital,
             "charge_model": request.charge_model,
+            "artifact_version": TRADE_ANALYSIS_ARTIFACT_VERSION,
         }
 
     def _cache_key(self, request: TradeAnalysisRequest) -> str:
@@ -616,10 +703,26 @@ class TradeAnalysisService:
         artifacts = metadata.get("artifacts")
         if not isinstance(artifacts, dict):
             return False
-        required = ["trades_csv", "summary_md", "summary_json", "financial_year_returns_csv"]
-        return all(Path(str(artifacts.get(key, ""))).exists() for key in required)
+        required = ["trades_csv", "open_positions_csv", "summary_md", "summary_json", "financial_year_returns_csv"]
+        return all(bool(artifacts.get(key)) and Path(str(artifacts.get(key))).is_file() for key in required)
 
     def _load_recommendations(self, request: TradeAnalysisRequest) -> list[dict[str, object]]:
+        recommendations = self._load_recommendations_for_model(request, request.recommendation_model)
+        if not recommendations and request.recommendation_model != MODEL:
+            recommendations = self._load_recommendations_for_model(request, MODEL)
+        if STRATEGIES[request.strategy].previous_day_vwap_max_extension is not None:
+            self._attach_signal_day_vwaps(request, recommendations)
+        return recommendations
+
+    def _load_recommendations_for_model(self, request: TradeAnalysisRequest, model: str) -> list[dict[str, object]]:
+        latest_available = self._scalar(
+            self.angel_engine,
+            f"SELECT MAX(date) FROM {self.pilot_schema}.recommendations_daily WHERE model = :model",
+            {"model": model},
+        )
+        if latest_available is None:
+            return []
+        effective_end_date = min(request.end_date, latest_available)
         query = text(
             f"""
             SELECT
@@ -645,9 +748,9 @@ class TradeAnalysisService:
         with self.angel_engine.connect() as connection:
             rows = connection.execute(
                 query,
-                {"model": request.recommendation_model, "start_date": request.start_date, "end_date": request.end_date},
+                {"model": model, "start_date": request.start_date, "end_date": effective_end_date},
             ).mappings().all()
-        recommendations = [
+        return [
             {
                 "date": row["date"],
                 "model": row["model"],
@@ -663,9 +766,10 @@ class TradeAnalysisService:
             }
             for row in rows
         ]
-        if STRATEGIES[request.strategy].previous_day_vwap_max_extension is not None:
-            self._attach_signal_day_vwaps(request, recommendations)
-        return recommendations
+
+    def _scalar(self, engine: Engine, query: str, params: dict[str, object] | None = None) -> object | None:
+        with engine.connect() as connection:
+            return connection.execute(text(query), params or {}).scalar_one_or_none()
 
     def _attach_signal_day_vwaps(self, request: TradeAnalysisRequest, recommendations: list[dict[str, object]]) -> None:
         if not recommendations:
@@ -779,23 +883,26 @@ class TradeAnalysisService:
         symbols: int,
     ) -> dict[str, str]:
         trades = result["trades"]
+        open_positions = result.get("open_positions", [])
         equity_curve = result["equity_curve"]
         summary = result["summary"]
         weekly_equity = weekly_equity_curve(equity_curve)
-        fy_returns = financial_year_returns(equity_curve)
+        fy_returns = financial_year_returns(equity_curve, trades)
         summary["financial_year_returns"] = fy_returns
         self._write_csv(report_dir / "trades.csv", trades)
+        self._write_csv(report_dir / "open_positions.csv", open_positions)
         self._write_csv(report_dir / "equity_curve.csv", equity_curve)
         self._write_csv(report_dir / "weekly_equity.csv", weekly_equity)
         self._write_csv(report_dir / "financial_year_returns.csv", fy_returns)
         (report_dir / "weekly_equity.svg").write_text(render_weekly_equity_svg(weekly_equity), encoding="utf-8")
         (report_dir / "summary.json").write_text(json.dumps(summary, indent=2, default=str), encoding="utf-8")
         (report_dir / "summary.md").write_text(
-            render_summary_markdown(report_id, request, summary, trades, recommendation_rows, symbols, weekly_equity, fy_returns),
+            render_summary_markdown(report_id, request, summary, trades, list(open_positions), recommendation_rows, symbols, weekly_equity, fy_returns),
             encoding="utf-8",
         )
         return {
             "trades_csv": str(report_dir / "trades.csv"),
+            "open_positions_csv": str(report_dir / "open_positions.csv"),
             "summary_md": str(report_dir / "summary.md"),
             "summary_json": str(report_dir / "summary.json"),
             "equity_curve_csv": str(report_dir / "equity_curve.csv"),
@@ -857,17 +964,28 @@ def financial_year_label(row_date: date) -> str:
     return f"FY{start_year}-{str(start_year + 1)[-2:]}"
 
 
-def financial_year_returns(equity_curve: list[dict[str, object]]) -> list[dict[str, object]]:
+def financial_year_returns(equity_curve: list[dict[str, object]], trades: list[dict[str, object]] | None = None) -> list[dict[str, object]]:
     by_fy: dict[str, list[dict[str, object]]] = {}
     for row in equity_curve:
         row_date = date.fromisoformat(str(row["date"]))
         by_fy.setdefault(financial_year_label(row_date), []).append(row)
+
+    trades_by_fy: dict[str, list[dict[str, object]]] = {}
+    for trade in trades or []:
+        exit_value = trade.get("exit_date")
+        if not exit_value:
+            continue
+        exit_date = date.fromisoformat(str(exit_value))
+        trades_by_fy.setdefault(financial_year_label(exit_date), []).append(trade)
 
     rows: list[dict[str, object]] = []
     for fy_label in sorted(by_fy):
         year_rows = sorted(by_fy[fy_label], key=lambda item: str(item["date"]))
         start_equity = float(year_rows[0]["equity"])
         end_equity = float(year_rows[-1]["equity"])
+        year_trades = trades_by_fy.get(fy_label, [])
+        winners = [trade for trade in year_trades if float(trade.get("net_pnl") or 0) > 0]
+        losers = [trade for trade in year_trades if float(trade.get("net_pnl") or 0) <= 0]
         rows.append(
             {
                 "financial_year": fy_label,
@@ -877,6 +995,10 @@ def financial_year_returns(equity_curve: list[dict[str, object]]) -> list[dict[s
                 "end_equity": end_equity,
                 "return_pct": (end_equity / start_equity - 1) if start_equity else None,
                 "trading_days": len(year_rows),
+                "closed_trades": len(year_trades),
+                "winners": len(winners),
+                "losers": len(losers),
+                "win_rate": (len(winners) / len(year_trades)) if year_trades else None,
             }
         )
     return rows
@@ -948,11 +1070,26 @@ def render_trade_table(rows: list[dict[str, object]]) -> list[str]:
     return output
 
 
+def render_open_position_table(rows: list[dict[str, object]]) -> list[str]:
+    if not rows:
+        return ["_No open positions at report end date._"]
+    output = [
+        "| Symbol | Entry | Planned Exit | Mark Date | Days Held | Unrealized PnL | Unrealized Return |",
+        "| --- | --- | --- | --- | ---: | ---: | ---: |",
+    ]
+    for row in rows:
+        output.append(
+            f"| {row['symbol']} | {row['entry_date']} @ {fmt_money(row['entry_price'])} | {row['planned_exit_date']} | {row['mark_date']} @ {fmt_money(row['mark_price'])} | {row['days_held']} | {fmt_money(row['unrealized_pnl'])} | {fmt_pct(row.get('unrealized_return_pct'))} |"
+        )
+    return output
+
+
 def render_summary_markdown(
     report_id: str,
     request: TradeAnalysisRequest,
     summary: dict[str, object],
     trades: list[dict[str, object]],
+    open_positions: list[dict[str, object]],
     recommendation_rows: int,
     symbols: int,
     weekly_equity: list[dict[str, object]],
@@ -984,10 +1121,10 @@ def render_summary_markdown(
         "",
         "## Financial Year Returns",
         "",
-        "| FY | Start Date | End Date | Start Equity | End Equity | Return | Trading Days |",
-        "| --- | --- | --- | ---: | ---: | ---: | ---: |",
+        "| FY | Start Date | End Date | Start Equity | End Equity | Return | Trading Days | Closed Trades | Win Rate |",
+        "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |",
         *[
-            f"| {row['financial_year']} | {row['start_date']} | {row['end_date']} | {fmt_money(row['start_equity'])} | {fmt_money(row['end_equity'])} | {fmt_pct(row.get('return_pct'))} | {row['trading_days']} |"
+            f"| {row['financial_year']} | {row['start_date']} | {row['end_date']} | {fmt_money(row['start_equity'])} | {fmt_money(row['end_equity'])} | {fmt_pct(row.get('return_pct'))} | {row['trading_days']} | {row.get('closed_trades', 0)} | {fmt_pct(row.get('win_rate'))} |"
             for row in fy_returns
         ],
         "",
@@ -1006,13 +1143,15 @@ def render_summary_markdown(
         "",
         "| Metric | Value |",
         "| --- | ---: |",
-        f"| Total trades | {summary.get('total_trades')} |",
+        f"| Closed trades | {summary.get('total_trades')} |",
+        f"| Open positions | {summary.get('open_positions', 0)} |",
         f"| Winners | {summary.get('winners')} |",
         f"| Losers | {summary.get('losers')} |",
         f"| Win rate | {fmt_pct(summary.get('win_rate'))} |",
         f"| Average winner | {fmt_pct(summary.get('average_winner'))} |",
         f"| Average loser | {fmt_pct(summary.get('average_loser'))} |",
         f"| Total charges | {fmt_money(summary.get('total_charges'))} |",
+        f"| Open unrealized PnL | {fmt_money(summary.get('open_unrealized_pnl'))} |",
         "",
         "## Top 5 Winners",
         "",
@@ -1021,6 +1160,10 @@ def render_summary_markdown(
         "## Top 5 Losers",
         "",
         *render_trade_table(losers),
+        "",
+        "## Open Positions",
+        "",
+        *render_open_position_table(open_positions),
         "",
         "## Constraints",
         "",

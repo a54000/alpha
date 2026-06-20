@@ -45,15 +45,19 @@ def test_frontend_has_loading_error_and_empty_states():
         assert "EmptyState" in source
 
 
-def test_dashboard_data_freshness_banner_uses_existing_apis():
+def test_dashboard_morning_brief_uses_existing_apis():
     dashboard = read("frontend/app/page.tsx")
     card = read("frontend/components/DataStatusCard.tsx")
 
-    assert "DataStatusCard" in dashboard
+    assert "Good morning" in dashboard
+    assert "NIFTY 500 return" in dashboard
+    assert "return_start_date" in dashboard
+    assert "System and pipeline status" in dashboard
     assert "/dashboard" in dashboard
     assert "/pipeline/status" in dashboard
-    assert "latestMarketDataDate" in dashboard
-    assert "latestRecommendationDate" in dashboard
+    assert "/recommendations/latest" in dashboard
+    assert "latest_candle_at" in dashboard
+    assert "latest_recommendation_date" in dashboard
     assert "latestPipelineRun" in card
     assert "All current" in card
     assert "Pipeline delayed" in card

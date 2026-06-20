@@ -86,8 +86,8 @@ export default async function RecommendationExplanationPage({
       <div className="grid cols-4">
         <MetricCard label="Rank" value={String(data.rank ?? "n/a")} />
         <MetricCard label="Final Score" value={displayNumber(finalScore)} />
-        <MetricCard label="ADX 14" value={displayNumber(snapshot.adx_14)} />
-        <MetricCard label="Sector Rank" value={String(snapshot.sector_rank_3m ?? snapshot.sector_rank_used ?? "n/a")} />
+        <MetricCard label="Trend Strength" value={displayNumber(snapshot.adx_14)} />
+        <MetricCard label="Sector Position" value={String(snapshot.sector_rank_3m ?? snapshot.sector_rank_used ?? "n/a")} />
       </div>
 
       <section className="panel factor-panel">
@@ -97,19 +97,19 @@ export default async function RecommendationExplanationPage({
         <div className="factor-grid">
           <div className="factor-row">
             <div>
-              <strong>EMA 200 Extension</strong>
+              <strong>Long-Term Trend Gap</strong>
             </div>
             <span className={toneForExtension(snapshot.ema200_extension)}>{pct(snapshot.ema200_extension)}</span>
           </div>
           <div className="factor-row">
             <div>
-              <strong>Prior 20D Return</strong>
+              <strong>Recent Momentum</strong>
             </div>
             <span className={toneForMomentum(snapshot.prior_20d_return)}>{pct(snapshot.prior_20d_return)}</span>
           </div>
           <div className="factor-row">
             <div>
-              <strong>EMA 200</strong>
+              <strong>Long-Term Average</strong>
             </div>
             <span>{displayNumber(snapshot.ema_200)}</span>
           </div>

@@ -13,13 +13,16 @@ Does not:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
+from pathlib import Path
 from typing import Iterable
 
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from db.models import IndexPricesDaily
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 @dataclass(frozen=True)
@@ -45,6 +48,7 @@ class IndexLoadResult:
 # for relative strength calculations as it reflects total investor return.
 INDEX_SYMBOL_MAP = {
     "NIFTY500": "^CRSLDX",
+    "NIFTY50": "^NSEI",
 }
 
 
@@ -75,11 +79,17 @@ def default_yfinance_index_fetcher(index_name: str, start_date: date, end_date: 
 
     # Map index name to yfinance ticker
     ticker = INDEX_SYMBOL_MAP.get(index_name, index_name)
+    cache_dir = REPO_ROOT / ".cache" / "yfinance"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    if hasattr(yf, "set_tz_cache_location"):
+        yf.set_tz_cache_location(str(cache_dir))
 
     frame = yf.download(
         ticker,
         start=start_date.isoformat(),
-        end=end_date.isoformat(),
+        # yfinance treats `end` as exclusive. The loader API treats end_date
+        # as inclusive because the rest of the ingestion scripts do.
+        end=(end_date + timedelta(days=1)).isoformat(),
         interval="1d",
         auto_adjust=False,
         progress=False,
@@ -87,7 +97,7 @@ def default_yfinance_index_fetcher(index_name: str, start_date: date, end_date: 
         threads=False,
     )
     if frame.empty:
-        return []
+        raise RuntimeError(f"No rows returned for {index_name} ({ticker}) from {start_date} to {end_date}.")
 
     bars: list[IndexPriceBar] = []
     for index, row in frame.iterrows():
@@ -130,11 +140,29 @@ class IndexLoader:
                         }
                         dialect_name = session.bind.dialect.name if session.bind else "sqlite"
                         if dialect_name == "postgresql":
-                            insert_stmt = pg_insert(IndexPricesDaily.__table__).values(**row).on_conflict_do_nothing(
+                            base_stmt = pg_insert(IndexPricesDaily.__table__).values(**row)
+                            insert_stmt = base_stmt.on_conflict_do_update(
                                 index_elements=["index_name", "date"],
+                                set_={
+                                    "open": base_stmt.excluded.open,
+                                    "high": base_stmt.excluded.high,
+                                    "low": base_stmt.excluded.low,
+                                    "close": base_stmt.excluded.close,
+                                    "volume": base_stmt.excluded.volume,
+                                },
                             )
                         elif dialect_name == "sqlite":
-                            insert_stmt = sqlite_insert(IndexPricesDaily.__table__).values(**row).prefix_with("OR IGNORE")
+                            base_stmt = sqlite_insert(IndexPricesDaily.__table__).values(**row)
+                            insert_stmt = base_stmt.on_conflict_do_update(
+                                index_elements=["index_name", "date"],
+                                set_={
+                                    "open": base_stmt.excluded.open,
+                                    "high": base_stmt.excluded.high,
+                                    "low": base_stmt.excluded.low,
+                                    "close": base_stmt.excluded.close,
+                                    "volume": base_stmt.excluded.volume,
+                                },
+                            )
                         else:
                             insert_stmt = IndexPricesDaily.__table__.insert().values(**row)
                         result = session.execute(insert_stmt)

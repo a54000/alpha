@@ -52,6 +52,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--skip-sync", action="store_true")
     parser.add_argument("--skip-paper-update", action="store_true")
     parser.add_argument("--pilot-schema", default="pilot_phase2a")
+    parser.add_argument("--universe-csv", default=os.environ.get("PILOT_UNIVERSE_CSV", "reports/nifty500_expansion_universe_symbols.csv"))
     parser.add_argument("--scoring-start-date", default="2022-05-25")
     parser.add_argument("--portfolio-id", type=int, default=int(os.environ.get("PAPER_PORTFOLIO_ID", "0") or 0))
     parser.add_argument("--portfolio-size", type=int, default=10)
@@ -130,6 +131,8 @@ def build_steps(args: argparse.Namespace) -> list[CycleStep]:
                     args.pilot_schema,
                     "--start-date",
                     args.scoring_start_date,
+                    "--universe-csv",
+                    args.universe_csv,
                     "--output-json",
                     "reports/phase3f_scoring_validation.json",
                     "--coverage-csv",
@@ -149,6 +152,8 @@ def build_steps(args: argparse.Namespace) -> list[CycleStep]:
                     "scripts/run_phase2d_pilot_recommendations.py",
                     "--pilot-schema",
                     args.pilot_schema,
+                    "--universe-csv",
+                    args.universe_csv,
                     "--output-json",
                     "reports/phase3f_recommendation_validation.json",
                     "--coverage-csv",
@@ -171,6 +176,8 @@ def build_steps(args: argparse.Namespace) -> list[CycleStep]:
                     "scripts/generate_sector_1m3m_pilot_recommendations.py",
                     "--pilot-schema",
                     args.pilot_schema,
+                    "--universe-csv",
+                    args.universe_csv,
                     "--start-date",
                     args.scoring_start_date,
                     "--end-date",

@@ -15,6 +15,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
+import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 
@@ -37,10 +38,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--angel-database-url", default=os.environ.get("ANGEL_DATABASE_URL"))
     parser.add_argument("--angel-database-name", default="angel_data")
     parser.add_argument("--pilot-schema", default="pilot_phase2a")
+    parser.add_argument("--universe-csv", default="reports/nifty500_expansion_universe_symbols.csv")
     parser.add_argument("--start-date", type=date.fromisoformat, default=date(2022, 5, 25))
     parser.add_argument("--end-date", type=date.fromisoformat, default=date.today())
     parser.add_argument("--minimum-score", type=float, default=70.0)
     parser.add_argument("--top-n", type=int, default=20)
+    parser.add_argument("--min-sector-points", type=int, default=1)
     parser.add_argument("--weight-1m", type=float, default=0.40)
     parser.add_argument("--weight-3m", type=float, default=0.60)
     parser.add_argument("--dry-run", action="store_true")
@@ -53,6 +56,20 @@ def derive_angel_url(research_database_url: str | None, database_name: str) -> s
         return None
     parts = urlsplit(research_database_url)
     return urlunsplit((parts.scheme, parts.netloc, f"/{database_name}", parts.query, parts.fragment))
+
+
+def load_universe_symbols(universe_csv: str | None) -> set[str]:
+    if not universe_csv:
+        return set()
+    path = REPO_ROOT / universe_csv
+    if not path.exists():
+        return set()
+    frame = pd.read_csv(path)
+    if "symbol" not in frame.columns:
+        return set()
+    if "status" in frame.columns:
+        frame = frame[frame["status"].astype(str).str.lower() == "ready"]
+    return {str(symbol).strip().upper() for symbol in frame["symbol"].dropna().tolist() if str(symbol).strip()}
 
 
 def ensure_table(connection, schema: str) -> None:
@@ -140,8 +157,11 @@ def main() -> int:
 
     engine = create_engine(angel_url, future=True, pool_pre_ping=True)
     features = load_features_and_sector_returns(engine, args.pilot_schema, args.start_date, args.end_date, args.weight_1m, args.weight_3m)
+    universe_symbols = load_universe_symbols(args.universe_csv)
+    if universe_symbols:
+        features = features[features["symbol"].astype(str).str.upper().isin(universe_symbols)].copy()
     scores = score_frame(features, "sector_rank_1m3m", "score_1m3m")
-    rows = generate_recommendations(scores, "score_1m3m", args.minimum_score, args.top_n, MODEL)
+    rows = generate_recommendations(scores, "score_1m3m", args.minimum_score, args.top_n, MODEL, args.min_sector_points)
     if not args.dry_run:
         write_candidate_rows(engine, args.pilot_schema, rows, args.start_date, args.end_date)
 
@@ -153,6 +173,7 @@ def main() -> int:
         "production_tables_modified": False,
         "legacy_recommendation_model_modified": False,
         "date_range": {"start": args.start_date.isoformat(), "end": args.end_date.isoformat()},
+        "min_sector_points": args.min_sector_points,
         "recommendation_rows": len(rows),
         "recommendation_dates": len(dates),
         "first_recommendation_date": dates[0].isoformat() if dates else None,

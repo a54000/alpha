@@ -1,0 +1,57 @@
+<div style="display: flex; gap: 0; background: var(--color-background-secondary); border-radius: var(--border-radius-lg); overflow: hidden; min-height: 560px;">
+
+<div style="width: 220px; flex-shrink: 0; background: var(--color-background-primary); border-right: 0.5px solid var(--color-border-tertiary); padding: 1.25rem 0.75rem; display: flex; flex-direction: column;">
+
+  <div style="display: flex; align-items: center; gap: 8px; padding: 0 0.5rem; margin-bottom: 4px;">
+    <span style="width: 9px; height: 9px; border-radius: 50%; background: var(--color-text-success); flex-shrink: 0;"></span>
+    <p style="font-size: 15px; font-weight: 500; margin: 0;">Sector rotation cockpit</p>
+  </div>
+  <p style="font-size: 11px; color: var(--color-text-tertiary); margin: 0 0 1.25rem; padding: 0 0.5rem; letter-spacing: 0.04em;">ADX ROLLING 10</p>
+
+  <p style="font-size: 11px; color: var(--color-text-tertiary); margin: 0 0 6px; padding: 0 0.5rem; letter-spacing: 0.04em;">OVERVIEW</p>
+  <div style="display: flex; align-items: center; gap: 10px; padding: 8px 0.5rem; border-radius: var(--border-radius-md); background: var(--color-background-info); margin-bottom: 2px; cursor: pointer;" onclick="sendPrompt('Show me the Dashboard')">
+    <i class="ti ti-layout-dashboard" style="font-size: 17px; color: var(--color-text-info);" aria-hidden="true"></i>
+    <span style="font-size: 14px; color: var(--color-text-info);">Dashboard</span>
+  </div>
+
+  <p style="font-size: 11px; color: var(--color-text-tertiary); margin: 14px 0 6px; padding: 0 0.5rem; letter-spacing: 0.04em;">LIVE STRATEGY</p>
+  <div style="display: flex; align-items: center; gap: 10px; padding: 8px 0.5rem; border-radius: var(--border-radius-md); margin-bottom: 2px; cursor: pointer;" onclick="sendPrompt('Show me Recommendations')">
+    <i class="ti ti-bulb" style="font-size: 17px; color: var(--color-text-secondary);" aria-hidden="true"></i>
+    <span style="font-size: 14px;">Recommendations</span>
+    <span style="margin-left: auto; background: var(--color-background-info); color: var(--color-text-info); font-size: 10px; padding: 1px 6px; border-radius: var(--border-radius-md);">2</span>
+  </div>
+  <div style="display: flex; align-items: center; gap: 10px; padding: 8px 0.5rem; border-radius: var(--border-radius-md); margin-bottom: 2px; cursor: pointer;" onclick="sendPrompt('Show me Portfolio')">
+    <i class="ti ti-briefcase" style="font-size: 17px; color: var(--color-text-secondary);" aria-hidden="true"></i>
+    <span style="font-size: 14px;">Portfolio</span>
+  </div>
+
+  <p style="font-size: 11px; color: var(--color-text-tertiary); margin: 14px 0 6px; padding: 0 0.5rem; letter-spacing: 0.04em;">RESEARCH</p>
+  <div style="display: flex; align-items: center; gap: 10px; padding: 8px 0.5rem; border-radius: var(--border-radius-md); margin-bottom: 2px; cursor: pointer;" onclick="sendPrompt('Show me Stock Analysis')">
+    <i class="ti ti-search" style="font-size: 17px; color: var(--color-text-secondary);" aria-hidden="true"></i>
+    <span style="font-size: 14px;">Stock analysis</span>
+  </div>
+  <div style="display: flex; align-items: center; gap: 10px; padding: 8px 0.5rem; border-radius: var(--border-radius-md); margin-bottom: 2px; cursor: pointer;" onclick="sendPrompt('Show me Rolling Portfolio backtest')">
+    <i class="ti ti-history" style="font-size: 17px; color: var(--color-text-secondary);" aria-hidden="true"></i>
+    <span style="font-size: 14px;">Rolling portfolio</span>
+    <span style="margin-left: auto; font-size: 10px; color: var(--color-text-tertiary); border: 0.5px solid var(--color-border-tertiary); padding: 1px 6px; border-radius: var(--border-radius-md);">backtest</span>
+  </div>
+  <div style="display: flex; align-items: center; gap: 10px; padding: 8px 0.5rem; border-radius: var(--border-radius-md); margin-bottom: 2px; cursor: pointer;" onclick="sendPrompt('Show me Trade Analysis')">
+    <i class="ti ti-chart-line" style="font-size: 17px; color: var(--color-text-secondary);" aria-hidden="true"></i>
+    <span style="font-size: 14px;">Trade analysis</span>
+    <span style="margin-left: auto; font-size: 10px; color: var(--color-text-tertiary); border: 0.5px solid var(--color-border-tertiary); padding: 1px 6px; border-radius: var(--border-radius-md);">backtest</span>
+  </div>
+
+  <div style="margin-top: auto; padding-top: 12px; border-top: 0.5px solid var(--color-border-tertiary);">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 8px 0.5rem; border-radius: var(--border-radius-md); cursor: pointer;" onclick="sendPrompt('Take me to Operations to run the daily job')">
+      <i class="ti ti-player-play" style="font-size: 17px; color: var(--color-text-warning);" aria-hidden="true"></i>
+      <span style="font-size: 14px; color: var(--color-text-warning);">Operations</span>
+    </div>
+  </div>
+
+</div>
+
+<div style="flex: 1; padding: 2rem; display: flex; align-items: center; justify-content: center;">
+  <p style="font-size: 13px; color: var(--color-text-tertiary); text-align: center; margin: 0;">Page content renders here</p>
+</div>
+
+</div>

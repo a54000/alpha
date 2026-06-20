@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { BarChart3, Search, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState, ErrorState } from "@/components/StatePanel";
-import { apiGet, money, pct } from "@/lib/api";
+import { apiGet, money, pct, relativePoints } from "@/lib/api";
 
 type SymbolMatch = {
   symbol: string;
@@ -52,20 +52,47 @@ function MiniCloseChart({ bars }: { bars: StockDashboard["recent_bars"] }) {
     const max = Math.max(...closes);
     const width = 520;
     const height = 150;
+    const margin = { left: 46, right: 12, top: 12, bottom: 24 };
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
     const range = max - min || 1;
     return closes
       .map((close, index) => {
-        const x = (index / (closes.length - 1)) * width;
-        const y = height - ((close - min) / range) * height;
+        const x = margin.left + (index / (closes.length - 1)) * plotWidth;
+        const y = margin.top + plotHeight - ((close - min) / range) * plotHeight;
         return `${x.toFixed(1)},${y.toFixed(1)}`;
       })
       .join(" ");
   }, [bars]);
 
   if (!points) return <EmptyState message="Not enough recent bars to draw the price line." />;
+  const closes = bars.map((bar) => numberValue(bar.close)).filter((value): value is number => value !== null);
+  const min = Math.min(...closes);
+  const max = Math.max(...closes);
+  const width = 520;
+  const height = 150;
+  const margin = { left: 46, right: 12, top: 12, bottom: 24 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const yTicks = [max, (min + max) / 2, min];
+  const xLabels = [bars[0]?.date, bars[Math.floor((bars.length - 1) / 2)]?.date, bars[bars.length - 1]?.date];
   return (
     <svg className="stock-chart" viewBox="0 0 520 150" role="img" aria-label="Recent close price line">
+      {yTicks.map((tick, index) => {
+        const y = margin.top + (index / 2) * plotHeight;
+        return (
+          <g key={tick.toFixed(2)}>
+            <line x1={margin.left} x2={width - margin.right} y1={y} y2={y} className="chart-gridline" />
+            <text x={margin.left - 8} y={y + 4} className="chart-axis-label" textAnchor="end">{formatNumber(tick, 0)}</text>
+          </g>
+        );
+      })}
       <polyline points={points} fill="none" stroke="currentColor" strokeWidth="3" />
+      {xLabels.map((label, index) => (
+        <text key={`${label}-${index}`} x={margin.left + (index / 2) * plotWidth} y={height - 5} className="chart-axis-label" textAnchor={index === 0 ? "start" : index === 2 ? "end" : "middle"}>
+          {String(label || "n/a")}
+        </text>
+      ))}
     </svg>
   );
 }
@@ -148,89 +175,107 @@ export default function StockAnalysisPage() {
 
   return (
     <>
-      <PageHeader title="Stock Analysis" subtitle="Find a stock and review the current signal context." />
+      <PageHeader
+        title="Stock Analysis"
+        subtitle="Search any stock to see its latest price context, SectorEdge 10 status, and recent recommendation history."
+      />
 
       <section className="panel stock-search-panel">
-        <div className="section-head">
-          <h2>Select Stock</h2>
-          <p className="subtitle">Pick a latest recommendation or search any stock.</p>
-        </div>
-        {recommended?.recommendations?.length ? (
-          <div className="recommended-stock-strip">
-            <div className="metric-label">Latest Recommendations {recommended.date ? `(${recommended.date})` : ""}</div>
-            <div className="stock-match-list compact">
-              {recommended.recommendations.map((item) => (
-                <button
-                  className={selectedSymbol === item.symbol ? "active" : ""}
-                  key={`${item.rank}-${item.symbol}`}
-                  type="button"
-                  onClick={() => { setQuery(item.symbol); loadDashboard(item.symbol); }}
-                >
-                  <span>
-                    <strong>{item.symbol}</strong>
-                    <small>{item.sector || `Rank ${item.rank}`}</small>
-                  </span>
-                  <em>#{item.rank}</em>
-                </button>
-              ))}
+        <div className="stock-search-layout">
+          <div className="stock-search-primary">
+            <div className="stock-search-title">
+              <Search size={18} aria-hidden="true" />
+              <div>
+                <h2>Find a Stock</h2>
+                <p className="subtitle">Type at least 3 characters, then choose from the matching symbols.</p>
+              </div>
             </div>
+            <div className="stock-input-wrap">
+              <Search size={18} aria-hidden="true" />
+              <input
+                aria-label="Stock symbol search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value.toUpperCase())}
+                placeholder="Search symbol, e.g. TAT"
+                list="stock-symbols"
+              />
+            </div>
+            <datalist id="stock-symbols">
+              {matches.map((match) => (
+                <option key={match.symbol} value={match.symbol}>{match.sector || ""}</option>
+              ))}
+            </datalist>
+            {term.length > 0 && !canSearch ? <p className="helper-text">Enter at least 3 characters.</p> : null}
+            {searching ? <p className="helper-text">Searching...</p> : null}
+            {searchError ? <div style={{ marginTop: 12 }}><ErrorState message={searchError} /></div> : null}
+            {canSearch && !searching && !matches.length && !searchError ? <p className="helper-text">No matching symbols found.</p> : null}
+            {matches.length ? (
+              <div className="stock-match-list">
+                {matches.slice(0, 10).map((match) => (
+                  <button
+                    className={selectedSymbol === match.symbol ? "active" : ""}
+                    key={match.symbol}
+                    type="button"
+                    onClick={() => { setQuery(match.symbol); loadDashboard(match.symbol); }}
+                  >
+                    <span>
+                      <strong>{match.symbol}</strong>
+                      <small>{match.sector || "Sector n/a"}</small>
+                    </span>
+                    <em>{match.latest_date || "n/a"}</em>
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
-        ) : null}
-        <div className="stock-search-row">
-          <div className="stock-input-wrap">
-            <Search size={18} aria-hidden="true" />
-            <input
-              aria-label="Stock symbol search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value.toUpperCase())}
-              placeholder="Search symbol, e.g. TAT"
-              list="stock-symbols"
-            />
+
+          <div className="stock-recommendation-panel">
+            <div className="stock-search-title">
+              <Sparkles size={18} aria-hidden="true" />
+              <div>
+                <h2>Current Shortlist</h2>
+                <p className="subtitle">{recommended?.date ? `Latest recommendations from ${recommended.date}.` : "Latest recommendations will appear here when available."}</p>
+              </div>
+            </div>
+            {recommended?.recommendations?.length ? (
+              <div className="stock-match-list compact">
+                {recommended.recommendations.map((item) => (
+                  <button
+                    className={selectedSymbol === item.symbol ? "active" : ""}
+                    key={`${item.rank}-${item.symbol}`}
+                    type="button"
+                    onClick={() => { setQuery(item.symbol); loadDashboard(item.symbol); }}
+                  >
+                    <span>
+                      <strong>{item.symbol}</strong>
+                      <small>{item.sector || "Sector n/a"}</small>
+                    </span>
+                    <em>#{item.rank}</em>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="helper-text">No current shortlist is available.</p>
+            )}
           </div>
-          <datalist id="stock-symbols">
-            {matches.map((match) => (
-              <option key={match.symbol} value={match.symbol}>{match.sector || ""}</option>
-            ))}
-          </datalist>
         </div>
-        {term.length > 0 && !canSearch ? <p className="helper-text">Enter at least 3 characters.</p> : null}
-        {searching ? <p className="helper-text">Searching...</p> : null}
-        {searchError ? <div style={{ marginTop: 12 }}><ErrorState message={searchError} /></div> : null}
-        {canSearch && !searching && !matches.length && !searchError ? <p className="helper-text">No matching symbols found.</p> : null}
-        {matches.length ? (
-          <div className="stock-match-list">
-            {matches.slice(0, 10).map((match) => (
-              <button
-                className={selectedSymbol === match.symbol ? "active" : ""}
-                key={match.symbol}
-                type="button"
-                onClick={() => { setQuery(match.symbol); loadDashboard(match.symbol); }}
-              >
-                <span>
-                  <strong>{match.symbol}</strong>
-                  <small>{match.sector || "Sector n/a"}</small>
-                </span>
-                <em>{match.latest_date || "n/a"}</em>
-              </button>
-            ))}
-          </div>
-        ) : null}
       </section>
 
+      {loading ? <div style={{ marginTop: 16 }}><EmptyState message={`Loading ${selectedSymbol || "stock"} analysis...`} /></div> : null}
       {dashboardError ? <div style={{ marginTop: 16 }}><ErrorState message={dashboardError} /></div> : null}
-      {!data && !dashboardError ? <div style={{ marginTop: 16 }}><EmptyState message="Search for a symbol above to open its stock dashboard." /></div> : null}
+      {!data && !dashboardError && !loading ? <div style={{ marginTop: 16 }}><EmptyState message="Search for a symbol or choose a current shortlist item to open its stock view." /></div> : null}
 
       {data ? (
         <>
           <section className="panel stock-hero">
             <div>
-              <div className="eyebrow">Stock Dashboard</div>
+              <div className="eyebrow">Stock View</div>
               <h2>{data.symbol}</h2>
               <p className="subtitle">{String(summary.sector || "Sector n/a")} · latest data {String(summary.latest_date || "n/a")}</p>
             </div>
             <div className="decision-badges">
               <span className={summary.above_ema200 ? "status-pill ok" : "status-pill warn"}>
-                {summary.above_ema200 ? "Above EMA200" : "Below EMA200"}
+                {summary.above_ema200 ? "Above long-term trend" : "Below long-term trend"}
               </span>
               {summary.last_recommended_date ? <span className="status-pill ok">Recommended before</span> : <span className="status-pill">No recent recommendation</span>}
             </div>
@@ -238,16 +283,19 @@ export default function StockAnalysisPage() {
 
           <div className="grid cols-4">
             <section className="panel"><div className="metric-label">Close</div><div className="metric-value">{money(summary.close)}</div></section>
-            <section className="panel"><div className="metric-label">ADX 14</div><div className="metric-value">{formatNumber(summary.adx_14)}</div></section>
-            <section className="panel"><div className="metric-label">EMA200 Extension</div><div className="metric-value">{pct(summary.ema200_extension)}</div></section>
-            <section className="panel"><div className="metric-label">20D Return</div><div className="metric-value">{pct(summary.prior_20d_return)}</div></section>
+            <section className="panel"><div className="metric-label">Trend Strength</div><div className="metric-value">{formatNumber(summary.adx_14)}</div></section>
+            <section className="panel"><div className="metric-label">Relative Strength vs Nifty</div><div className="metric-value">{relativePoints(summary.rs_score_vs_nifty50_66d)}</div></section>
+            <section className="panel"><div className="metric-label">Recent Return</div><div className="metric-value">{pct(summary.prior_20d_return)}</div></section>
           </div>
 
           <div className="grid cols-2" style={{ marginTop: 16 }}>
             <section className="panel">
               <div className="section-head">
-                <h2>Recent Price</h2>
-                <p className="subtitle">Last 60 daily closes.</p>
+                <div>
+                  <h2>Recent Price</h2>
+                  <p className="subtitle">Last 60 daily closes.</p>
+                </div>
+                <BarChart3 size={18} aria-hidden="true" />
               </div>
               <MiniCloseChart bars={data.recent_bars} />
             </section>
@@ -258,8 +306,8 @@ export default function StockAnalysisPage() {
                   <tr><td>Last recommendation date</td><td>{String(summary.last_recommended_date || "n/a")}</td></tr>
                   <tr><td>Last rank</td><td>{String(summary.last_rank || "n/a")}</td></tr>
                   <tr><td>Last score</td><td>{formatNumber(summary.last_score)}</td></tr>
-                  <tr><td>Sector rank</td><td>{String(summary.sector_rank_3m || "n/a")}</td></tr>
-                  <tr><td>EMA200</td><td>{money(summary.ema_200)}</td></tr>
+                  <tr><td>Sector position</td><td>{String(summary.sector_rank_3m || "n/a")}</td></tr>
+                  <tr><td>Long-term average</td><td>{money(summary.ema_200)}</td></tr>
                 </tbody>
               </table>
             </section>

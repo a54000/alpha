@@ -37,7 +37,6 @@ from sqlalchemy import create_engine, text
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODEL = "swing_v2_1"
 START_DATE = date(2022, 5, 25)
-END_DATE = date(2026, 6, 11)
 KNOWN_SPECIAL_SESSIONS = {
     date(2022, 10, 24),
     date(2023, 11, 12),
@@ -90,6 +89,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--angel-database-url", default=os.environ.get("ANGEL_DATABASE_URL"))
     parser.add_argument("--angel-database-name", default="angel_data")
     parser.add_argument("--pilot-schema", default="pilot_phase2a")
+    parser.add_argument("--universe-csv", default="reports/nifty500_expansion_universe_symbols.csv")
     parser.add_argument("--metrics-json", default="reports/phase2e_portfolio_metrics.json")
     parser.add_argument("--equity-csv", default="reports/phase2e_equity_curves.csv")
     parser.add_argument("--trades-csv", default="reports/phase2e_trade_ledger.csv")
@@ -104,19 +104,38 @@ def derive_angel_url(research_database_url: str | None, database_name: str) -> s
     return urlunsplit((parts.scheme, parts.netloc, f"/{database_name}", parts.query, parts.fragment))
 
 
-def load_recommendations(angel_url: str, schema: str) -> list[dict[str, object]]:
+def load_universe_symbols(universe_csv: str | None) -> set[str]:
+    if not universe_csv:
+        return set()
+    path = REPO_ROOT / universe_csv
+    if not path.exists():
+        return set()
+    frame = pd.read_csv(path)
+    if "symbol" not in frame.columns:
+        return set()
+    if "status" in frame.columns:
+        frame = frame[frame["status"].astype(str).str.lower() == "ready"]
+    return {str(symbol).strip().upper() for symbol in frame["symbol"].dropna().tolist() if str(symbol).strip()}
+
+
+def load_recommendations(angel_url: str, schema: str, start_date: date, end_date: date | None = None) -> list[dict[str, object]]:
     engine = create_engine(angel_url, future=True)
+    end_clause = "AND date <= :end_date" if end_date is not None else ""
     query = text(
         f"""
         SELECT date, model, rank, symbol, score, sector
         FROM {schema}.recommendations_daily
         WHERE model = :model
-          AND date BETWEEN :start_date AND :end_date
+          AND date >= :start_date
+          {end_clause}
         ORDER BY date, rank, symbol
         """
     )
+    params: dict[str, object] = {"model": MODEL, "start_date": start_date}
+    if end_date is not None:
+        params["end_date"] = end_date
     with engine.connect() as connection:
-        rows = connection.execute(query, {"model": MODEL, "start_date": START_DATE, "end_date": END_DATE}).mappings().all()
+        rows = connection.execute(query, params).mappings().all()
     return [
         {
             "date": row["date"],
@@ -130,21 +149,26 @@ def load_recommendations(angel_url: str, schema: str) -> list[dict[str, object]]
     ]
 
 
-def load_prices(angel_url: str, schema: str, symbols: set[str]) -> dict[str, dict[date, dict[str, float]]]:
+def load_prices(angel_url: str, schema: str, symbols: set[str], start_date: date, end_date: date | None = None) -> dict[str, dict[date, dict[str, float]]]:
     if not symbols:
         return {}
     engine = create_engine(angel_url, future=True)
+    end_clause = "AND date <= :end_date" if end_date is not None else ""
     query = text(
         f"""
         SELECT symbol, date, open, close
         FROM {schema}.daily_bars_clean
         WHERE symbol = ANY(:symbols)
           AND date >= :start_date
+          {end_clause}
         ORDER BY symbol, date
         """
     )
+    params: dict[str, object] = {"symbols": list(symbols), "start_date": start_date}
+    if end_date is not None:
+        params["end_date"] = end_date
     with engine.connect() as connection:
-        rows = connection.execute(query, {"symbols": list(symbols), "start_date": START_DATE}).mappings().all()
+        rows = connection.execute(query, params).mappings().all()
     prices: dict[str, dict[date, dict[str, float]]] = {}
     for row in rows:
         open_price = row["open"]
@@ -390,7 +414,7 @@ def run_backtest(
     first_signal = min(recs_by_date)
     start_date = next_trading_day_after(dates, first_signal) or dates[0]
     start_index = max(0, dates.index(start_date))
-    simulation_dates = [item for item in dates[start_index:] if item <= END_DATE]
+    simulation_dates = dates[start_index:]
 
     cash = config.initial_capital
     positions: list[PilotPosition] = []
@@ -456,7 +480,7 @@ def run_backtest(
                 if allocation <= 0:
                     break
                 planned_exit = nth_trading_day_after(symbol_dates(prices, symbol), current_date, config.holding_period)
-                if planned_exit is None or planned_exit > END_DATE:
+                if planned_exit is None:
                     continue
                 shares = allocation / open_price
                 cash -= allocation
@@ -574,9 +598,18 @@ def main() -> int:
     if not angel_url:
         raise RuntimeError("Angel database URL is required.")
 
-    recommendations = load_recommendations(angel_url, args.pilot_schema)
+    with create_engine(angel_url, future=True).connect() as connection:
+        latest_recommendation_date = connection.execute(
+            text(f"SELECT MAX(date) FROM {args.pilot_schema}.recommendations_daily WHERE model = :model"),
+            {"model": MODEL},
+        ).scalar_one_or_none()
+
+    recommendations = load_recommendations(angel_url, args.pilot_schema, START_DATE, latest_recommendation_date)
+    universe_symbols = load_universe_symbols(args.universe_csv)
+    if universe_symbols:
+        recommendations = [row for row in recommendations if str(row["symbol"]).strip().upper() in universe_symbols]
     symbols = {str(row["symbol"]) for row in recommendations}
-    prices = load_prices(angel_url, args.pilot_schema, symbols)
+    prices = load_prices(angel_url, args.pilot_schema, symbols, START_DATE, latest_recommendation_date)
 
     results = {}
     equity_rows: list[dict[str, object]] = []
@@ -598,7 +631,7 @@ def main() -> int:
         "generated_on": date.today().isoformat(),
         "mode": "phase2e_pilot_portfolio_backtest",
         "model": MODEL,
-        "date_range": {"start": START_DATE.isoformat(), "end": END_DATE.isoformat()},
+        "date_range": {"start": START_DATE.isoformat(), "end": latest_recommendation_date.isoformat() if latest_recommendation_date else None},
         "production_tables_modified": False,
         "scoring_changed": False,
         "recommendations_changed": False,

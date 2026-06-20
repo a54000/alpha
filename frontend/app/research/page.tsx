@@ -30,6 +30,17 @@ type Payload = {
     first_divergence?: Record<string, unknown>;
     root_cause_classification?: Array<Record<string, unknown>>;
   }>;
+  sector_1m3m?: {
+    metrics?: MetricBlock | null;
+    monte_carlo?: MetricBlock | null;
+    validation_source?: string;
+  };
+  cash_sweep_overlay?: {
+    method?: string | null;
+    assumptions?: Record<string, unknown> | null;
+    scenario?: MetricBlock | null;
+    source?: string;
+  };
 };
 
 function asNumber(value: unknown): number | null {
@@ -47,6 +58,12 @@ function formatNumber(value: unknown, digits = 2): string {
   const number = asNumber(value);
   if (number === null) return "n/a";
   return number.toLocaleString("en-IN", { maximumFractionDigits: digits });
+}
+
+function formatMoney(value: unknown): string {
+  const number = asNumber(value);
+  if (number === null) return "n/a";
+  return number.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 }
 
 function formatDateRange(start?: string, end?: string): string {
@@ -86,7 +103,7 @@ export default async function ResearchPage() {
   if (!result.ok) {
     return (
       <>
-        <PageHeader title="Research" subtitle="Evidence behind the Sector Rotation ADX Rolling 10 strategy." />
+        <PageHeader title="Research" subtitle="Evidence behind SectorEdge 10." />
         <ErrorState message={result.error} />
       </>
     );
@@ -101,13 +118,15 @@ export default async function ResearchPage() {
   const top5WalkForward = data.walk_forward?.stability_summary?.top5_weekly || {};
   const top10WalkForward = data.walk_forward?.stability_summary?.top10_weekly || {};
   const top10Paper = data.paper_replay?.top10_weekly;
+  const finalMetrics = data.sector_1m3m?.metrics || {};
+  const cashSweep = data.cash_sweep_overlay?.scenario || {};
   const hasStudies = Object.keys(data.summary || {}).length > 0;
 
   return (
     <>
       <PageHeader
         title="Research"
-        subtitle="Validation evidence, robustness checks, and analysis tools for Sector Rotation ADX Rolling 10."
+        subtitle="Validation evidence, robustness checks, and analysis tools for SectorEdge 10."
       />
 
       {!hasStudies ? <EmptyState message="No research metrics were returned by the API." /> : null}
@@ -115,7 +134,7 @@ export default async function ResearchPage() {
       <section className={`panel ${styles.verdict}`}>
         <div>
           <div className="metric-label">Current research decision</div>
-          <h2>Rolling 10 remains the preferred construction for paper observation.</h2>
+          <h2>SectorEdge 10 remains the preferred setup for paper observation.</h2>
           <p className="subtitle">
             The long-history evidence is positive, but deployment still depends on live paper tracking,
             fill behavior, data freshness, and drawdown discipline.
@@ -133,6 +152,34 @@ export default async function ResearchPage() {
         <VariantMetricCard title="Top 10 Weekly" variant={top10} />
         <VariantMetricCard title="Top 10 + Sector Cap" variant={sectorCap} />
       </div>
+
+      <section className="panel cash-sweep-card" style={{ marginTop: 16 }}>
+        <div className="section-head">
+          <div>
+            <h2>
+              Cash Sweep Overlay
+              <span className="info-tip" tabIndex={0} aria-label="What is Cash Sweep Overlay?">
+                i
+                <span className="tooltip">
+                  This estimates what idle cash could earn in a liquid fund. It is shown separately because it is cash management, not strategy alpha.
+                </span>
+              </span>
+            </h2>
+            <p className="subtitle">
+              Core strategy CAGR stays pure. Deployable portfolio CAGR adds the estimated return on unused cash after expenses and churn.
+            </p>
+          </div>
+          <span className="status-pill ok">Optional overlay</span>
+        </div>
+        <div className={styles.metricGrid}>
+          <span>Pure strategy CAGR</span><strong>{formatPct(cashSweep.cagr_before ?? finalMetrics.cagr)}</strong>
+          <span>Deployable portfolio CAGR</span><strong>{formatPct(cashSweep.cagr_after)}</strong>
+          <span>CAGR uplift from cash sweep</span><strong>{formatPct(cashSweep.cagr_delta)}</strong>
+          <span>Net liquid-fund gain</span><strong>{formatMoney(cashSweep.net_liquid_gain)}</strong>
+          <span>Churn cost included</span><strong>{formatMoney(cashSweep.liquid_churn_cost)}</strong>
+          <span>Average idle cash used</span><strong>{formatPct(cashSweep.avg_cash_pct)}</strong>
+        </div>
+      </section>
 
       <div className="grid cols-2" style={{ marginTop: 16 }}>
         <section className="panel">
@@ -185,7 +232,7 @@ export default async function ResearchPage() {
           </div>
           <div>
             <strong>Operational parity</strong>
-            <p className="subtitle">Paper trading must keep matching the frozen recommendation and holding-period rules.</p>
+            <p className="subtitle">Paper trading must keep matching the approved recommendation and holding-period setup.</p>
           </div>
         </div>
       </section>

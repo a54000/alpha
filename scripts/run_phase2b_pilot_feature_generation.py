@@ -39,6 +39,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--angel-database-url", default=os.environ.get("ANGEL_DATABASE_URL"))
     parser.add_argument("--angel-database-name", default="angel_data")
     parser.add_argument("--pilot-schema", default="pilot_phase2a")
+    parser.add_argument("--nifty500-csv", help="Optional Nifty 500 CSV used as a sector-map fallback for expanded pilot symbols.")
     parser.add_argument("--output-json", default="reports/phase2b_feature_validation.json")
     parser.add_argument("--coverage-csv", default="reports/phase2b_feature_coverage_by_symbol.csv")
     parser.add_argument("--nulls-csv", default="reports/phase2b_feature_null_rates.csv")
@@ -52,11 +53,20 @@ def derive_angel_url(research_database_url: str | None, database_name: str) -> s
     return urlunsplit((parts.scheme, parts.netloc, f"/{database_name}", parts.query, parts.fragment))
 
 
-def load_sector_map(research_url: str) -> dict[str, str | None]:
+def load_sector_map(research_url: str, nifty500_csv: str | None = None) -> dict[str, str | None]:
     engine = create_engine(research_url, future=True)
     with engine.connect() as connection:
         rows = connection.execute(text("SELECT symbol, sector FROM symbol_master")).all()
-    return {row[0]: row[1] for row in rows}
+    sector_map = {str(row[0]).upper(): row[1] for row in rows}
+    if nifty500_csv:
+        path = REPO_ROOT / nifty500_csv
+        with path.open(encoding="utf-8", newline="") as handle:
+            for row in csv.DictReader(handle):
+                symbol = str(row.get("Symbol") or row.get("symbol") or "").strip().upper()
+                sector = row.get("Industry") or row.get("industry")
+                if symbol and sector and not sector_map.get(symbol):
+                    sector_map[symbol] = str(sector).strip().upper()
+    return sector_map
 
 
 def load_clean_bars(angel_url: str, schema: str) -> pd.DataFrame:
@@ -354,7 +364,7 @@ def main() -> int:
     if not research_url or not angel_url:
         raise RuntimeError("Research and Angel database URLs are required.")
 
-    sector_map = load_sector_map(research_url)
+    sector_map = load_sector_map(research_url, args.nifty500_csv)
     clean_bars = load_clean_bars(angel_url, args.pilot_schema)
     features = compute_symbol_features(clean_bars, sector_map)
     sector_daily = compute_sector_daily(features)

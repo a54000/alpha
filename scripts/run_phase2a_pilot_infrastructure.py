@@ -46,6 +46,10 @@ class ExactMatchSymbol:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build Phase 2A pilot daily bars in an isolated Angel schema.")
     parser.add_argument("--alias-proposals", default="reports/phase1b_alias_proposals.csv")
+    parser.add_argument(
+        "--universe-csv",
+        help="Optional CSV with a symbol column. When supplied, rebuilds the pilot universe from this file instead of Phase 1B exact matches.",
+    )
     parser.add_argument("--research-database-url", default=os.environ.get("DATABASE_URL"))
     parser.add_argument("--angel-database-url", default=os.environ.get("ANGEL_DATABASE_URL"))
     parser.add_argument("--angel-database-name", default="angel_data")
@@ -83,6 +87,28 @@ def load_exact_match_symbols(path: Path) -> list[ExactMatchSymbol]:
                     security_proposal_id=security_id,
                     research_symbol=research_symbol,
                     angel_symbol=angel_symbol,
+                )
+            )
+    return symbols
+
+
+def load_symbols_from_universe_csv(path: Path) -> list[ExactMatchSymbol]:
+    symbols: list[ExactMatchSymbol] = []
+    with path.open(encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        if not reader.fieldnames or "symbol" not in reader.fieldnames:
+            raise RuntimeError(f"{path} must contain a symbol column.")
+        seen: set[str] = set()
+        for row in reader:
+            symbol = str(row.get("symbol") or "").strip().upper()
+            if not symbol or symbol in seen:
+                continue
+            seen.add(symbol)
+            symbols.append(
+                ExactMatchSymbol(
+                    security_proposal_id=f"nifty500:{symbol}",
+                    research_symbol=symbol,
+                    angel_symbol=symbol,
                 )
             )
     return symbols
@@ -388,8 +414,12 @@ def main() -> int:
     if not angel_url:
         raise RuntimeError("Angel database URL is required. Set ANGEL_DATABASE_URL or DATABASE_URL.")
 
-    exact_symbols = load_exact_match_symbols(REPO_ROOT / args.alias_proposals)
-    if len(exact_symbols) != 285:
+    exact_symbols = (
+        load_symbols_from_universe_csv(REPO_ROOT / args.universe_csv)
+        if args.universe_csv
+        else load_exact_match_symbols(REPO_ROOT / args.alias_proposals)
+    )
+    if not args.universe_csv and len(exact_symbols) != 285:
         raise RuntimeError(f"Expected 285 exact-match securities, found {len(exact_symbols)}")
 
     engine = create_engine(angel_url, future=True)

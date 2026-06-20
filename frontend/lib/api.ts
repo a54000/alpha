@@ -11,8 +11,14 @@ export type ApiResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: string };
 
-export async function apiGet<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
+type ApiFetchOptions = RequestInit & {
+  next?: {
+    revalidate?: number;
+  };
+};
+
+export async function apiGet<T>(path: string, options?: ApiFetchOptions): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, options || { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`API request failed: ${response.status}`);
   }
@@ -38,9 +44,9 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function safeApiGet<T>(path: string): Promise<ApiResult<T>> {
+export async function safeApiGet<T>(path: string, options?: ApiFetchOptions): Promise<ApiResult<T>> {
   try {
-    const data = await apiGet<T>(path);
+    const data = await apiGet<T>(path, options);
     return { ok: true, data };
   } catch (error) {
     return {
@@ -62,4 +68,13 @@ export function pct(value: unknown): string {
   const number = Number(value);
   if (Number.isNaN(number)) return String(value);
   return `${(number * 100).toFixed(2)}%`;
+}
+
+export function relativePoints(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "n/a";
+  const number = Number(value);
+  if (Number.isNaN(number)) return String(value);
+  const points = number * 100;
+  const sign = points > 0 ? "+" : "";
+  return `${sign}${points.toFixed(2)} pts`;
 }

@@ -44,6 +44,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--angel-database-url", default=os.environ.get("ANGEL_DATABASE_URL"))
     parser.add_argument("--angel-database-name", default="angel_data")
     parser.add_argument("--pilot-schema", default="pilot_phase2a")
+    parser.add_argument("--universe-csv", help="Optional universe CSV used to filter symbols before ranking.")
     parser.add_argument("--output-json", default="reports/phase2d_recommendation_validation.json")
     parser.add_argument("--coverage-csv", default="reports/phase2d_recommendation_coverage_by_date.csv")
     parser.add_argument("--symbol-csv", default="reports/phase2d_recommendations_by_symbol.csv")
@@ -88,6 +89,20 @@ def load_scores(angel_url: str, schema: str) -> pd.DataFrame:
     ]:
         frame[column] = pd.to_numeric(frame[column], errors="coerce")
     return frame
+
+
+def load_universe_symbols(universe_csv: str | None) -> set[str]:
+    if not universe_csv:
+        return set()
+    path = REPO_ROOT / universe_csv
+    if not path.exists():
+        return set()
+    frame = pd.read_csv(path)
+    if "symbol" not in frame.columns:
+        return set()
+    if "status" in frame.columns:
+        frame = frame[frame["status"].astype(str).str.lower() == "ready"]
+    return {str(symbol).strip().upper() for symbol in frame["symbol"].dropna().tolist() if str(symbol).strip()}
 
 
 def generate_recommendations(scores: pd.DataFrame) -> pd.DataFrame:
@@ -309,6 +324,9 @@ def main() -> int:
         raise RuntimeError("Angel database URL is required.")
 
     scores = load_scores(angel_url, args.pilot_schema)
+    universe_symbols = load_universe_symbols(args.universe_csv)
+    if universe_symbols:
+        scores = scores[scores["symbol"].astype(str).str.upper().isin(universe_symbols)].copy()
     recommendations = generate_recommendations(scores)
     write_recommendations(angel_url, args.pilot_schema, recommendations)
     report = summarize(scores, recommendations)

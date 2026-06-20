@@ -157,17 +157,29 @@ def score_frame(features: pd.DataFrame, sector_rank_column: str, score_column: s
     return pd.DataFrame(rows)
 
 
-def recommendation_eligible(row, score_column: str) -> bool:
+def recommendation_eligible(row, score_column: str, min_sector_points: int = 0) -> bool:
     score = getattr(row, score_column)
     if pd.isna(score) or pd.isna(row.ema200_extension):
+        return False
+    sector_points = getattr(row, "sector_points", None)
+    if sector_points is None or pd.isna(sector_points) or int(sector_points) < min_sector_points:
         return False
     return float(row.ema200_extension) > 0
 
 
-def generate_recommendations(scores: pd.DataFrame, score_column: str, minimum_score: float, top_n: int, model: str) -> list[dict[str, object]]:
+def generate_recommendations(
+    scores: pd.DataFrame,
+    score_column: str,
+    minimum_score: float,
+    top_n: int,
+    model: str,
+    min_sector_points: int = 0,
+) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for score_date, date_scores in scores.groupby("date", sort=True):
-        candidates = date_scores[[recommendation_eligible(row, score_column) for row in date_scores.itertuples(index=False)]].copy()
+        candidates = date_scores[
+            [recommendation_eligible(row, score_column, min_sector_points) for row in date_scores.itertuples(index=False)]
+        ].copy()
         candidates = candidates[candidates[score_column] >= minimum_score]
         candidates = candidates.sort_values([score_column, "symbol"], ascending=[False, True]).head(top_n)
         for rank, row in enumerate(candidates.itertuples(index=False), start=1):

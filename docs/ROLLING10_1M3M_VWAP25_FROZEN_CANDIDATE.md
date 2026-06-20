@@ -13,27 +13,28 @@ Status: frozen research/paper candidate, separate from frozen Swing V2.1.
 
 1. Generate candidates using the Sector Rotation ADX score with sector strength based only on 1-month and 3-month sector returns.
 2. Sector rank score uses `40% * 1M sector return + 60% * 3M sector return`.
-3. Select up to the top 5 weekly recommendations.
-4. Maintain a rolling 10-slot portfolio.
-5. Enter on the next trading day at the 10:30 15-minute candle open.
-6. Skip entry if the 10:30 entry price is more than 2.5% above the signal day's full-day VWAP.
-7. Hold each entered position for 20 trading days.
-8. Exit only on planned holding-period completion.
-9. Do not use stop-loss, RSI filter, daily fill-up, or calendar-month holding.
+3. Exclude candidates with `sector_points < 1`; sectors ranked outside the top 8 are not investable.
+4. Select up to the top 5 weekly recommendations.
+5. Maintain a rolling 10-slot portfolio.
+6. Enter on the next trading day at the 10:30 15-minute candle open.
+7. Skip entry if the 10:30 entry price is more than 2.5% above the signal day's full-day VWAP.
+8. Hold each entered position for 20 trading days.
+9. Exit only on planned holding-period completion.
+10. Do not use stop-loss, RSI filter, daily fill-up, or calendar-month holding.
 
 ## Validation Snapshot
 
-Source: `results/entry_1030_prevday_vwap_grid/ENTRY_1030_PREVDAY_VWAP_GRID.md`
+Source: `results/sector_points_filter_comparison/SECTOR_POINTS_FILTER_COMPARISON.md`
 
-- CAGR: 29.07%
-- Max drawdown: -12.28%
-- Sharpe: 1.35
-- Sortino: 1.71
-- Profit factor: 1.90
-- Win rate: 56.45%
-- Closed trades: 411
-- Average cash: 22.13%
-- Skipped entries: 28
+- CAGR: 25.99%
+- Max drawdown: -13.52%
+- Sharpe: 1.24
+- Sortino: 1.51
+- Profit factor: 1.85
+- Win rate: 59.13%
+- Closed trades: 389
+- Average cash: 26.37%
+- Zero-sector-point recommendation rows removed: 1,798
 
 ## Rejected Alternatives
 
@@ -42,6 +43,7 @@ Source: `results/entry_1030_prevday_vwap_grid/ENTRY_1030_PREVDAY_VWAP_GRID.md`
 - 15-trading-day and one-calendar-month holding periods did not improve the final candidate.
 - RSI skip did not justify inclusion.
 - Stop-loss variants reduced CAGR without materially improving drawdown.
+- Allowing `sector_points = 0` kept CAGR roughly unchanged but allowed weak-sector entries, which conflicts with the sector-rotation thesis.
 
 ## Paper Trading Integration
 
@@ -50,7 +52,8 @@ Generate candidate recommendation rows without overwriting legacy V2.1:
 ```powershell
 .\.venv\Scripts\python.exe scripts\generate_sector_1m3m_pilot_recommendations.py `
   --start-date 2022-05-25 `
-  --end-date 2026-06-12
+  --end-date 2026-06-12 `
+  --min-sector-points 1
 ```
 
 Use the new strategy mode explicitly:

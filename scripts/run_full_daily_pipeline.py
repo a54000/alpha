@@ -23,7 +23,7 @@ import os
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -36,6 +36,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 STEP_ORDER = [
     "angel_data_sync",
+    "index_data_refresh",
     "market_data_validation",
     "daily_bar_refresh",
     "feature_generation",
@@ -70,6 +71,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--portfolio-size", type=int, default=10)
     parser.add_argument("--max-candidate-rank", type=int, default=5)
     parser.add_argument("--paper-strategy-mode", default=os.environ.get("PAPER_STRATEGY_MODE", "sector_rotation_adx_r10_vwap25"))
+    parser.add_argument("--benchmark-index", default=os.environ.get("BENCHMARK_INDEX", "NIFTY500"))
+    parser.add_argument(
+        "--universe-csv",
+        default=os.environ.get("PILOT_UNIVERSE_CSV", "reports/nifty500_expansion_universe_symbols.csv"),
+        help=(
+            "Optional pilot universe CSV. Passed to Phase 2A as --universe-csv "
+            "and Phase 2B as --nifty500-csv so daily runs keep the expanded universe."
+        ),
+    )
+    parser.add_argument("--index-start-date", help="Optional inclusive start date for benchmark refresh. Defaults to business date minus 10 calendar days.")
     parser.add_argument("--scoring-start-date", default="2022-05-25")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--resume", action="store_true")
@@ -87,9 +98,12 @@ def tail(value: str, limit: int = 4000) -> str:
 def build_steps(args: argparse.Namespace) -> list[PipelineStep]:
     py = args.python
     report_date = args.business_date
+    business_date = date.fromisoformat(args.business_date)
+    index_start_date = args.index_start_date or (business_date - timedelta(days=10)).isoformat()
     sync_cmd = [py, "scripts/sync_angel_daily_data.py"]
     if args.sync_dry_run:
         sync_cmd.append("--dry-run")
+    universe_csv = str(args.universe_csv or "").strip()
 
     paper_cmd = [
         py,
@@ -109,42 +123,77 @@ def build_steps(args: argparse.Namespace) -> list[PipelineStep]:
     if args.rebalance_paper:
         paper_cmd.append("--rebalance")
 
-    candidate_recommendation_steps = []
-    if args.paper_strategy_mode in {"sector_rotation_adx_r10_vwap25", "rolling10_1m3m_vwap25_paper"}:
-        candidate_recommendation_steps.append(
-            PipelineStep(
-                "candidate_recommendation_generation",
-                [
-                    py,
-                    "scripts/generate_sector_1m3m_pilot_recommendations.py",
-                    "--pilot-schema",
-                    args.pilot_schema,
-                    "--start-date",
-                    args.scoring_start_date,
-                    "--end-date",
-                    args.business_date,
-                    "--output-json",
-                    "reports/rolling10_1m3m_candidate_recommendations.json",
-                ],
-            )
+    candidate_recommendation_steps = [
+        PipelineStep(
+            "candidate_recommendation_generation",
+            [
+                py,
+                "scripts/generate_sector_1m3m_pilot_recommendations.py",
+                "--pilot-schema",
+                args.pilot_schema,
+                "--universe-csv",
+                universe_csv,
+                "--start-date",
+                args.scoring_start_date,
+                "--end-date",
+                args.business_date,
+                "--output-json",
+                "reports/rolling10_1m3m_candidate_recommendations.json",
+            ],
         )
+    ]
+
+    market_data_validation_cmd = [
+        py,
+        "scripts/run_phase2a_pilot_infrastructure.py",
+        "--pilot-schema",
+        args.pilot_schema,
+        "--output-json",
+        "reports/phase4b_market_data_validation.json",
+        "--coverage-csv",
+        "reports/phase4b_daily_bar_coverage.csv",
+        "--issues-csv",
+        "reports/phase4b_daily_bar_issues.csv",
+    ]
+    feature_generation_cmd = [
+        py,
+        "scripts/run_phase2b_pilot_feature_generation.py",
+        "--pilot-schema",
+        args.pilot_schema,
+        "--output-json",
+        "reports/phase4b_feature_validation.json",
+        "--coverage-csv",
+        "reports/phase4b_feature_coverage_by_symbol.csv",
+        "--nulls-csv",
+        "reports/phase4b_feature_null_rates.csv",
+    ]
+    if universe_csv:
+        market_data_validation_cmd.extend(["--universe-csv", universe_csv])
+        feature_generation_cmd.extend(["--nifty500-csv", universe_csv])
+        scoring_universe_args = ["--universe-csv", universe_csv]
+        recommendation_universe_args = ["--universe-csv", universe_csv]
+    else:
+        scoring_universe_args = []
+        recommendation_universe_args = []
 
     return [
         PipelineStep("angel_data_sync", sync_cmd),
         PipelineStep(
-            "market_data_validation",
+            "index_data_refresh",
             [
                 py,
-                "scripts/run_phase2a_pilot_infrastructure.py",
-                "--pilot-schema",
-                args.pilot_schema,
-                "--output-json",
-                "reports/phase4b_market_data_validation.json",
-                "--coverage-csv",
-                "reports/phase4b_daily_bar_coverage.csv",
-                "--issues-csv",
-                "reports/phase4b_daily_bar_issues.csv",
+                "scripts/backfill_index_data.py",
+                "--index-name",
+                args.benchmark_index,
+                "--start-date",
+                index_start_date,
+                "--end-date",
+                args.business_date,
             ],
+        ),
+        PipelineStep(
+            "market_data_validation",
+            market_data_validation_cmd,
         ),
         PipelineStep(
             "daily_bar_refresh",
@@ -163,18 +212,7 @@ def build_steps(args: argparse.Namespace) -> list[PipelineStep]:
         ),
         PipelineStep(
             "feature_generation",
-            [
-                py,
-                "scripts/run_phase2b_pilot_feature_generation.py",
-                "--pilot-schema",
-                args.pilot_schema,
-                "--output-json",
-                "reports/phase4b_feature_validation.json",
-                "--coverage-csv",
-                "reports/phase4b_feature_coverage_by_symbol.csv",
-                "--nulls-csv",
-                "reports/phase4b_feature_null_rates.csv",
-            ],
+            feature_generation_cmd,
         ),
         PipelineStep(
             "swing_v2_1_scoring",
@@ -185,6 +223,7 @@ def build_steps(args: argparse.Namespace) -> list[PipelineStep]:
                 args.pilot_schema,
                 "--start-date",
                 args.scoring_start_date,
+                *scoring_universe_args,
                 "--output-json",
                 "reports/phase4b_scoring_validation.json",
                 "--coverage-csv",
@@ -204,6 +243,7 @@ def build_steps(args: argparse.Namespace) -> list[PipelineStep]:
                 "scripts/run_phase2d_pilot_recommendations.py",
                 "--pilot-schema",
                 args.pilot_schema,
+                *recommendation_universe_args,
                 "--output-json",
                 "reports/phase4b_recommendation_validation.json",
                 "--coverage-csv",
@@ -475,6 +515,14 @@ def main() -> int:
         "dry_run": args.dry_run,
         "resume": args.resume,
         "from_step": args.from_step,
+        "configuration": {
+            "pilot_schema": args.pilot_schema,
+            "universe_csv": args.universe_csv or None,
+            "benchmark_index": args.benchmark_index,
+            "paper_strategy_mode": args.paper_strategy_mode,
+            "portfolio_size": args.portfolio_size,
+            "max_candidate_rank": args.max_candidate_rank,
+        },
         "constraints": {
             "strategy_changed": False,
             "scoring_changed": False,
